@@ -5,6 +5,7 @@ import com.example.osmgraph.model.*;
 import com.example.osmgraph.entity.*;
 import com.example.osmgraph.repo.LocationRepository;
 import com.fasterxml.jackson.databind.*;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.client.RestTemplate;
@@ -21,7 +22,8 @@ public class GraphService {
     @Autowired
     private LocationRepository repo;
 
-    public void loadFromOSM() throws Exception{
+    public synchronized void loadFromOSM() throws Exception
+    {
 
         String url="https://overpass-api.de/api/interpreter";
 
@@ -90,42 +92,60 @@ public class GraphService {
         return R*y;
     }
 
+    @Transactional
     public void persistToDB(){
 
+        // Make snapshot copy first (IMPORTANT)
+        Map<Node, List<Edge>> snapshot =
+                new HashMap<>(graph);
+
+        // Clear DB first
         repo.deleteAll();
 
-        Map<String,LocationEntity> saved=new HashMap<>();
+        Map<String,LocationEntity> saved =
+                new HashMap<>();
 
-        for(Node n:graph.keySet()){
+        // Save nodes
+        for(Node n : snapshot.keySet()){
 
-            LocationEntity e=
-              new LocationEntity(n.id,n.lat,n.lon);
+            LocationEntity e =
+                    new LocationEntity(n.id,n.lat,n.lon);
 
             saved.put(n.id,e);
         }
 
         repo.saveAll(saved.values());
 
-        for(Node from:graph.keySet()){
+        // Save relationships
+        for(Map.Entry<Node,List<Edge>> entry
+                : snapshot.entrySet()){
 
-            LocationEntity fromDB=saved.get(from.id);
+            Node from = entry.getKey();
 
-            List<RoadEntity> roads=new ArrayList<>();
+            LocationEntity fromDB =
+                    saved.get(from.id);
 
-            for(Edge e:graph.get(from)){
+            List<RoadEntity> roads =
+                    new ArrayList<>();
 
-                LocationEntity toDB=saved.get(e.to.id);
+            for(Edge e : entry.getValue()){
 
-                roads.add(new RoadEntity(toDB,e.distance));
+                LocationEntity toDB =
+                        saved.get(e.to.id);
+
+                roads.add(
+                        new RoadEntity(toDB,e.distance)
+                );
             }
 
-            fromDB.roads=roads;
-
+            fromDB.roads = roads;
             repo.save(fromDB);
         }
     }
 
-    public void loadFromDB(){
+
+    public synchronized void loadFromDB()
+    {
 
         graph.clear();
 
