@@ -1,8 +1,11 @@
 
 package com.example.osmgraph.service;
 
+import com.example.osmgraph.entity.LocationEntity;
 import com.example.osmgraph.model.*;
+import com.example.osmgraph.repo.LocationRepository;
 import com.fasterxml.jackson.databind.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -10,6 +13,8 @@ import java.util.*;
 
 @Service
 public class GraphService {
+    @Autowired
+    private LocationRepository repo;
 
  private final RestTemplate rest=new RestTemplate();
  private final Map<Node,List<Edge>> graph=new HashMap<>();
@@ -77,6 +82,21 @@ public class GraphService {
 
   return R*y;
  }
+    public void persistGraph(){
+
+        Map<String, LocationEntity> saved = new HashMap<>();
+
+        for(Node n : graph.keySet()){
+
+            LocationEntity loc =
+                    new LocationEntity(n.id,n.lat,n.lon);
+
+            saved.put(n.id,loc);
+        }
+
+        // Save all nodes first
+        repo.saveAll(saved.values());
+    }
 
  public Map<Node,List<Edge>> getGraph(){
   return graph;
