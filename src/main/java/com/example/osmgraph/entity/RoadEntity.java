@@ -1,3 +1,4 @@
+
 package com.example.osmgraph.entity;
 
 import org.springframework.data.neo4j.core.schema.*;
@@ -17,4 +18,6 @@ public class RoadEntity {
         this.to=to;
         this.distance=distance;
     }
+
+    public RoadEntity(){}
 }

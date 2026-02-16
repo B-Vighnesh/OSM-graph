@@ -1,3 +1,4 @@
+
 package com.example.osmgraph.repo;
 
 import com.example.osmgraph.entity.LocationEntity;
