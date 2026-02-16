@@ -138,7 +138,7 @@ public class GraphService {
                 );
             }
 
-            fromDB.roads = roads;
+            fromDB.setRoads(roads);
             repo.save(fromDB);
         }
     }
@@ -155,23 +155,23 @@ public class GraphService {
 
         for(LocationEntity e:all){
 
-            Node n=new Node(e.id,e.lat,e.lon);
-            nodes.put(e.id,n);
+            Node n=new Node(e.getId(), e.getLat(), e.getLon());
+            nodes.put(e.getId(),n);
             graph.put(n,new ArrayList<>());
         }
 
         for(LocationEntity e:all){
 
-            Node from=nodes.get(e.id);
+            Node from=nodes.get(e.getId());
 
-            if(e.roads==null) continue;
+            if(e.getRoads() ==null) continue;
 
-            for(RoadEntity r:e.roads){
+            for(RoadEntity r: e.getRoads()){
 
-                Node to=nodes.get(r.to.id);
+                Node to=nodes.get(r.getTo().getId());
 
                 graph.get(from)
-                  .add(new Edge(to,r.distance));
+                  .add(new Edge(to, r.getDistance()));
             }
         }
     }

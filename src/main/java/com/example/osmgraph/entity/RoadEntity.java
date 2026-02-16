@@ -1,23 +1,45 @@
-
 package com.example.osmgraph.entity;
 
 import org.springframework.data.neo4j.core.schema.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.neo4j.core.schema.GeneratedValue;
 
 @RelationshipProperties
 public class RoadEntity {
 
-    @Id @GeneratedValue
-    private Long id;
+    @Id
+    @GeneratedValue
+    private Long id;   // REQUIRED by Spring Data
 
     @TargetNode
-    public LocationEntity to;
+    private LocationEntity to;
 
-    public double distance;
+    private double distance;
 
-    public RoadEntity(LocationEntity to,double distance){
-        this.to=to;
-        this.distance=distance;
+    public RoadEntity() {}
+
+    public RoadEntity(LocationEntity to, double distance) {
+        this.to = to;
+        this.distance = distance;
     }
 
-    public RoadEntity(){}
+    public Long getId() {
+        return id;
+    }
+
+    public LocationEntity getTo() {
+        return to;
+    }
+
+    public void setTo(LocationEntity to) {
+        this.to = to;
+    }
+
+    public double getDistance() {
+        return distance;
+    }
+
+    public void setDistance(double distance) {
+        this.distance = distance;
+    }
 }
