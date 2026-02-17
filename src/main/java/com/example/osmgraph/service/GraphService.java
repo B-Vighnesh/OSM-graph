@@ -22,79 +22,25 @@ public class GraphService {
     @Autowired
     private LocationRepository repo;
 
-    public synchronized void loadFromOSM() throws Exception
-    {
-
-        String url="https://overpass-api.de/api/interpreter";
-
-        // Mangaluru coordinates
-        String query = """
-                [out:json][timeout:25];
-                // Kundapura bounding box
-                way["highway"](13.568,74.630,13.681,74.721);
-                out geom;
-                
-        """;
-
-        System.out.println("hiii");
+    @Autowired
+    private OsmFileParser parser;
 
 
-        String res=rest.postForObject(url,query,String.class);
+    public synchronized void loadFromFile() throws Exception {
 
-        ObjectMapper mapper=new ObjectMapper();
-        JsonNode root=mapper.readTree(res);
-        System.out.println(root);
+        String path =
+                "src/main/resources/osm/map.osm";
+
         graph.clear();
 
-        for(JsonNode way:root.get("elements")){
-            String roadName = "UNKNOWN";
-            String roadType = "UNKNOWN";
+        Map<Node,List<Edge>> parsed =
+                parser.parse(path);
 
-            if (way.has("tags")) {
-
-                JsonNode tags = way.get("tags");
-
-                if (tags.has("name"))
-                    roadName = tags.get("name").asText();
-
-                if (tags.has("highway"))
-                    roadType = tags.get("highway").asText();
-            }
-
-            JsonNode geo=way.get("geometry");
-
-            for(int i=0;i<geo.size()-1;i++){
-
-                double lat1=geo.get(i).get("lat").asDouble();
-                double lon1=geo.get(i).get("lon").asDouble();
-
-                double lat2=geo.get(i+1).get("lat").asDouble();
-                double lon2=geo.get(i+1).get("lon").asDouble();
-
-                Node a = new Node(
-                        lat1+":"+lon1,
-                        lat1,
-                        lon1,
-                        roadName,
-                        roadType
-                );
-
-                Node b = new Node(
-                        lat2+":"+lon2,
-                        lat2,
-                        lon2,
-                        roadName,
-                        roadType
-                );
-
-
-                connect(a,b);
-                connect(b,a);
-            }
-        }
+        graph.putAll(parsed);
 
         persistToDB();
     }
+
 
     private void connect(Node a,Node b){
 
@@ -261,6 +207,69 @@ public class GraphService {
                   .add(new Edge(to, r.getDistance()));
             }
         }
+    }
+    public List<Node> bfsLevel1(String startId){
+
+        List<Node> result = new ArrayList<>();
+
+        // Find start node
+        Node start = null;
+
+        for(Node n : graph.keySet()){
+            if(n.id.equals(startId)){
+                start = n;
+                break;
+            }
+        }
+
+        if(start == null){
+            return result; // empty
+        }
+
+        // Visited set (avoid loops)
+        Set<Node> visited = new HashSet<>();
+
+        Queue<Node> queue = new LinkedList<>();
+
+        // Start BFS
+        queue.add(start);
+        visited.add(start);
+
+        int level = 0;
+
+        while(!queue.isEmpty()){
+
+            int size = queue.size();
+
+            // One BFS layer
+            for(int i=0;i<size;i++){
+
+                Node curr = queue.poll();
+
+                // Stop at level 1
+                if(level == 1){
+                    result.add(curr);
+                    continue;
+                }
+
+                // Visit neighbors
+                for(Edge e : graph.get(curr)){
+
+                    Node next = e.to;
+
+                    if(!visited.contains(next)){
+                        visited.add(next);
+                        queue.add(next);
+                    }
+                }
+            }
+
+            level++;
+
+            if(level > 1) break;
+        }
+
+        return result;
     }
 
     public Map<Node,List<Edge>> getGraph(){
