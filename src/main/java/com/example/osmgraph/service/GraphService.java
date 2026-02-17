@@ -28,16 +28,20 @@ public class GraphService {
         String url="https://overpass-api.de/api/interpreter";
 
         // Mangaluru coordinates
-        String query =
-         "[out:json];" +
-         "way(around:3000,12.9141,74.8560)[\"highway\"];" +
-         "out geom;";
+        String query = """
+                [out:json][timeout:25];
+                way["highway"](13.48848, 74.58319, 13.98072, 75.06374);
+                out geom;
+        """;
+
+        System.out.println("hiii");
+
 
         String res=rest.postForObject(url,query,String.class);
 
         ObjectMapper mapper=new ObjectMapper();
         JsonNode root=mapper.readTree(res);
-
+        System.out.println(root);
         graph.clear();
 
         for(JsonNode way:root.get("elements")){
@@ -95,30 +99,55 @@ public class GraphService {
     @Transactional
     public void persistToDB(){
 
-        // Make snapshot copy first (IMPORTANT)
+        System.out.println("Persisting (batch mode)...");
+
+        // Snapshot
         Map<Node, List<Edge>> snapshot =
                 new HashMap<>(graph);
 
-        // Clear DB first
+        // Clear DB
         repo.deleteAll();
 
-        Map<String,LocationEntity> saved =
+        Map<String, LocationEntity> saved =
                 new HashMap<>();
 
-        // Save nodes
-        for(Node n : snapshot.keySet()){
+        // ==========================
+        // 1️⃣ BATCH SAVE NODES
+        // ==========================
+
+        List<LocationEntity> nodeBatch = new ArrayList<>();
+
+        int BATCH_SIZE = 500;
+
+        for (Node n : snapshot.keySet()) {
 
             LocationEntity e =
-                    new LocationEntity(n.id,n.lat,n.lon);
+                    new LocationEntity(n.id, n.lat, n.lon);
 
-            saved.put(n.id,e);
+            saved.put(n.id, e);
+            nodeBatch.add(e);
+
+            if (nodeBatch.size() == BATCH_SIZE) {
+                repo.saveAll(nodeBatch);
+                nodeBatch.clear();
+            }
         }
 
-        repo.saveAll(saved.values());
+        // Save remaining
+        if (!nodeBatch.isEmpty()) {
+            repo.saveAll(nodeBatch);
+        }
 
-        // Save relationships
-        for(Map.Entry<Node,List<Edge>> entry
-                : snapshot.entrySet()){
+        System.out.println("Nodes saved");
+
+
+        // ==========================
+        // 2️⃣ BATCH SAVE ROADS
+        // ==========================
+
+        List<LocationEntity> relBatch = new ArrayList<>();
+
+        for (Map.Entry<Node, List<Edge>> entry : snapshot.entrySet()) {
 
             Node from = entry.getKey();
 
@@ -128,20 +157,35 @@ public class GraphService {
             List<RoadEntity> roads =
                     new ArrayList<>();
 
-            for(Edge e : entry.getValue()){
+            for (Edge e : entry.getValue()) {
 
                 LocationEntity toDB =
                         saved.get(e.to.id);
 
                 roads.add(
-                        new RoadEntity(toDB,e.distance)
+                        new RoadEntity(toDB, e.distance)
                 );
             }
 
             fromDB.setRoads(roads);
-            repo.save(fromDB);
+            relBatch.add(fromDB);
+
+
+            if (relBatch.size() == BATCH_SIZE) {
+                repo.saveAll(relBatch);
+                relBatch.clear();
+            }
         }
+
+        // Save remaining
+        if (!relBatch.isEmpty()) {
+            repo.saveAll(relBatch);
+        }
+
+        System.out.println("Relationships saved");
+        System.out.println("Persist done (batch)");
     }
+
 
 
     public synchronized void loadFromDB()
