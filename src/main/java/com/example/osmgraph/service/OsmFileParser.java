@@ -6,6 +6,8 @@ import org.openstreetmap.osmosis.xml.v0_6.XmlReader;
 import org.openstreetmap.osmosis.core.container.v0_6.EntityContainer;
 import org.openstreetmap.osmosis.core.task.v0_6.Sink;
 import org.openstreetmap.osmosis.core.domain.v0_6.*;
+import org.openstreetmap.osmosis.xml.common.CompressionMethod;
+import java.io.File;
 
 import org.springframework.stereotype.Service;
 
@@ -21,8 +23,14 @@ public class OsmFileParser {
 
     public Map<Node,List<Edge>> parse(String path) throws Exception {
 
-        XmlReader reader =
-                new XmlReader(new FileInputStream(path), false);
+        File file = new File(path);
+
+        XmlReader reader = new XmlReader(
+                file,
+                false,
+                CompressionMethod.None
+        );
+
 
         reader.setSink(new Sink() {
 
@@ -42,6 +50,7 @@ public class OsmFileParser {
                             id,
                             n.getLatitude(),
                             n.getLongitude(),
+                            null,
                             null
                     );
 
