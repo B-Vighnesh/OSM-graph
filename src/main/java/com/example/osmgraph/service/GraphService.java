@@ -30,8 +30,10 @@ public class GraphService {
         // Mangaluru coordinates
         String query = """
                 [out:json][timeout:25];
-                way["highway"](13.48848, 74.58319, 13.98072, 75.06374);
+                // Kundapura bounding box
+                way["highway"](13.568,74.630,13.681,74.721);
                 out geom;
+                
         """;
 
         System.out.println("hiii");
@@ -45,6 +47,19 @@ public class GraphService {
         graph.clear();
 
         for(JsonNode way:root.get("elements")){
+            String roadName = "UNKNOWN";
+            String roadType = "UNKNOWN";
+
+            if (way.has("tags")) {
+
+                JsonNode tags = way.get("tags");
+
+                if (tags.has("name"))
+                    roadName = tags.get("name").asText();
+
+                if (tags.has("highway"))
+                    roadType = tags.get("highway").asText();
+            }
 
             JsonNode geo=way.get("geometry");
 
@@ -56,8 +71,22 @@ public class GraphService {
                 double lat2=geo.get(i+1).get("lat").asDouble();
                 double lon2=geo.get(i+1).get("lon").asDouble();
 
-                Node a=new Node(lat1+":"+lon1,lat1,lon1);
-                Node b=new Node(lat2+":"+lon2,lat2,lon2);
+                Node a = new Node(
+                        lat1+":"+lon1,
+                        lat1,
+                        lon1,
+                        roadName,
+                        roadType
+                );
+
+                Node b = new Node(
+                        lat2+":"+lon2,
+                        lat2,
+                        lon2,
+                        roadName,
+                        roadType
+                );
+
 
                 connect(a,b);
                 connect(b,a);
@@ -122,7 +151,14 @@ public class GraphService {
         for (Node n : snapshot.keySet()) {
 
             LocationEntity e =
-                    new LocationEntity(n.id, n.lat, n.lon);
+                    new LocationEntity(
+                            n.id,
+                            n.lat,
+                            n.lon,
+                            n.name,
+                            n.highway
+                    );
+
 
             saved.put(n.id, e);
             nodeBatch.add(e);
@@ -199,7 +235,14 @@ public class GraphService {
 
         for(LocationEntity e:all){
 
-            Node n=new Node(e.getId(), e.getLat(), e.getLon());
+            Node n = new Node(
+                    e.getId(),
+                    e.getLat(),
+                    e.getLon(),
+                    e.getName(),
+                    e.getHighway()
+            );
+
             nodes.put(e.getId(),n);
             graph.put(n,new ArrayList<>());
         }

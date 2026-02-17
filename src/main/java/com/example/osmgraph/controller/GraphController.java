@@ -14,14 +14,14 @@ public class GraphController {
         this.service=service;
     }
 
-    @GetMapping("/load-osm")
-    public String loadOSM() throws Exception{
-
-        service.loadFromOSM();
-
-        return "Loaded from OSM and saved to Neo4j. Nodes = "
-                +service.getGraph().size();
-    }
+//    @GetMapping("/load-osm")
+//    public String loadOSM() throws Exception{
+//
+//        service.loadFromOSM();
+//
+//        return "Loaded from OSM and saved to Neo4j. Nodes = "
+//                +service.getGraph().size();
+//    }
 
     @GetMapping("/load-db")
     public String loadDB(){

@@ -3,15 +3,24 @@ package com.example.osmgraph.model;
 
 public class Node {
 
- public String id;
- public double lat;
- public double lon;
+    public String id;
+    public double lat;
+    public double lon;
 
- public Node(String id,double lat,double lon){
-  this.id=id;
-  this.lat=lat;
-  this.lon=lon;
- }
+    public String name;       // road name
+    public String highway;    // road type
+
+
+    public Node(String id, double lat, double lon,
+                String name, String highway){
+
+        this.id = id;
+        this.lat = lat;
+        this.lon = lon;
+        this.name = name;
+        this.highway = highway;
+    }
+
 
  @Override
  public boolean equals(Object o){

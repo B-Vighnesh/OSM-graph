@@ -14,6 +14,8 @@ public class LocationEntity {
 
     private double lat;
     private double lon;
+    private String name;
+    private String highway;
 
     @Version
     private Long version;
@@ -23,11 +25,16 @@ public class LocationEntity {
 
     public LocationEntity() {}
 
-    public LocationEntity(String id, double lat, double lon) {
+    public LocationEntity(String id, double lat, double lon,
+                          String name, String highway) {
+
         this.id = id;
         this.lat = lat;
         this.lon = lon;
+        this.name = name;
+        this.highway = highway;
     }
+
 
     public String getId() {
         return id;
@@ -68,4 +75,20 @@ public class LocationEntity {
     public void setLat(double lat) {
         this.lat = lat;
     }
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getHighway() {
+        return highway;
+    }
+
+    public void setHighway(String highway) {
+        this.highway = highway;
+    }
+
 }
