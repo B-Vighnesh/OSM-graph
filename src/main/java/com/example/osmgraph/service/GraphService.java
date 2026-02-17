@@ -15,9 +15,10 @@ import java.util.*;
 @Service
 public class GraphService {
 
-    private final RestTemplate rest=new RestTemplate();
+    private final RestTemplate rest = new RestTemplate();
 
-    private final Map<Node,List<Edge>> graph=new HashMap<>();
+    private final Map<String, Node> nodeIndex = new HashMap<>();
+    private final Map<Node, List<Edge>> graph = new HashMap<>();
 
     @Autowired
     private LocationRepository repo;
@@ -25,66 +26,65 @@ public class GraphService {
     @Autowired
     private OsmFileParser parser;
 
-
     public synchronized void loadFromFile() throws Exception {
 
-        String path =
-                "src/main/resources/osm/map.osm";
+        String path = "src/main/resources/osm/map.osm";
 
         graph.clear();
+        nodeIndex.clear();
 
-        Map<Node,List<Edge>> parsed =
-                parser.parse(path);
+        Map<Node, List<Edge>> parsed = parser.parse(path);
 
         graph.putAll(parsed);
+
+        // Build index
+        for (Node n : graph.keySet()) {
+            nodeIndex.put(n.id, n);
+        }
 
         persistToDB();
     }
 
+    private void connect(Node a, Node b) {
 
-    private void connect(Node a,Node b){
-
-        double d=distance(a,b);
+        double d = distance(a, b);
 
         graph
-         .computeIfAbsent(a,k->new ArrayList<>())
-         .add(new Edge(b,d));
+                .computeIfAbsent(a, k -> new ArrayList<>())
+                .add(new Edge(b, d));
     }
 
-    private double distance(Node a,Node b){
+    private double distance(Node a, Node b) {
 
-        double R=6371000;
+        double R = 6371000;
 
-        double lat1=Math.toRadians(a.lat);
-        double lat2=Math.toRadians(b.lat);
+        double lat1 = Math.toRadians(a.lat);
+        double lat2 = Math.toRadians(b.lat);
 
-        double dLat=lat2-lat1;
-        double dLon=Math.toRadians(b.lon-a.lon);
+        double dLat = lat2 - lat1;
+        double dLon = Math.toRadians(b.lon - a.lon);
 
-        double x=
-         Math.sin(dLat/2)*Math.sin(dLat/2)+
-         Math.cos(lat1)*Math.cos(lat2)*
-         Math.sin(dLon/2)*Math.sin(dLon/2);
+        double x = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1) * Math.cos(lat2) *
+                        Math.sin(dLon / 2) * Math.sin(dLon / 2);
 
-        double y=2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+        double y = 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
 
-        return R*y;
+        return R * y;
     }
 
     @Transactional
-    public void persistToDB(){
+    public void persistToDB() {
 
         System.out.println("Persisting (batch mode)...");
 
         // Snapshot
-        Map<Node, List<Edge>> snapshot =
-                new HashMap<>(graph);
+        Map<Node, List<Edge>> snapshot = new HashMap<>(graph);
 
         // Clear DB
         repo.deleteAll();
 
-        Map<String, LocationEntity> saved =
-                new HashMap<>();
+        Map<String, LocationEntity> saved = new HashMap<>();
 
         // ==========================
         // 1️⃣ BATCH SAVE NODES
@@ -96,15 +96,12 @@ public class GraphService {
 
         for (Node n : snapshot.keySet()) {
 
-            LocationEntity e =
-                    new LocationEntity(
-                            n.id,
-                            n.lat,
-                            n.lon,
-                            n.name,
-                            n.highway
-                    );
-
+            LocationEntity e = new LocationEntity(
+                    n.id,
+                    n.lat,
+                    n.lon,
+                    n.name,
+                    n.highway);
 
             saved.put(n.id, e);
             nodeBatch.add(e);
@@ -122,7 +119,6 @@ public class GraphService {
 
         System.out.println("Nodes saved");
 
-
         // ==========================
         // 2️⃣ BATCH SAVE ROADS
         // ==========================
@@ -133,25 +129,20 @@ public class GraphService {
 
             Node from = entry.getKey();
 
-            LocationEntity fromDB =
-                    saved.get(from.id);
+            LocationEntity fromDB = saved.get(from.id);
 
-            List<RoadEntity> roads =
-                    new ArrayList<>();
+            List<RoadEntity> roads = new ArrayList<>();
 
             for (Edge e : entry.getValue()) {
 
-                LocationEntity toDB =
-                        saved.get(e.to.id);
+                LocationEntity toDB = saved.get(e.to.id);
 
                 roads.add(
-                        new RoadEntity(toDB, e.distance)
-                );
+                        new RoadEntity(toDB, e.distance));
             }
 
             fromDB.setRoads(roads);
             relBatch.add(fromDB);
-
 
             if (relBatch.size() == BATCH_SIZE) {
                 repo.saveAll(relBatch);
@@ -168,111 +159,171 @@ public class GraphService {
         System.out.println("Persist done (batch)");
     }
 
+    @Autowired
+    private org.springframework.data.neo4j.core.Neo4jClient neo4jClient;
 
-
-    public synchronized void loadFromDB()
-    {
+    public synchronized void loadFromDB() {
 
         graph.clear();
+        nodeIndex.clear();
 
-        List<LocationEntity> all=repo.findAll();
+        System.out.println("Loading nodes...");
 
-        Map<String,Node> nodes=new HashMap<>();
+        // 1. Load all nodes
+        Collection<Map<String, Object>> nodesData = neo4jClient
+                .query("MATCH (n:Location) RETURN n.id AS id, n.lat AS lat, n.lon AS lon, n.name AS name, n.highway AS highway")
+                .fetch()
+                .all();
 
-        for(LocationEntity e:all){
+        for (Map<String, Object> row : nodesData) {
+            String id = (String) row.get("id");
+            if (id == null)
+                continue;
 
-            Node n = new Node(
-                    e.getId(),
-                    e.getLat(),
-                    e.getLon(),
-                    e.getName(),
-                    e.getHighway()
-            );
+            double lat = ((Number) row.get("lat")).doubleValue();
+            double lon = ((Number) row.get("lon")).doubleValue();
+            String name = (String) row.get("name");
+            String highway = (String) row.get("highway");
 
-            nodes.put(e.getId(),n);
-            graph.put(n,new ArrayList<>());
+            Node n = new Node(id, lat, lon, name, highway);
+            nodeIndex.put(id, n);
+            graph.put(n, new ArrayList<>());
         }
+        System.out.println("Nodes loaded: " + nodeIndex.size());
 
-        for(LocationEntity e:all){
+        System.out.println("Loading edges...");
 
-            Node from=nodes.get(e.getId());
+        // 2. Load all edges
+        Collection<Map<String, Object>> edgesData = neo4jClient
+                .query("MATCH (n:Location)-[r:ROAD]->(m:Location) RETURN n.id AS from, m.id AS to, r.distance AS dist")
+                .fetch()
+                .all();
 
-            if(e.getRoads() ==null) continue;
+        int edgeCount = 0;
+        for (Map<String, Object> row : edgesData) {
+            String fromId = (String) row.get("from");
+            String toId = (String) row.get("to");
+            double dist = ((Number) row.get("dist")).doubleValue();
 
-            for(RoadEntity r: e.getRoads()){
+            Node from = nodeIndex.get(fromId);
+            Node to = nodeIndex.get(toId);
 
-                Node to=nodes.get(r.getTo().getId());
-
-                graph.get(from)
-                  .add(new Edge(to, r.getDistance()));
+            if (from != null && to != null) {
+                graph.get(from).add(new Edge(to, dist));
+                edgeCount++;
             }
         }
+        System.out.println("Edges loaded: " + edgeCount);
     }
-    public List<Node> bfsLevel1(String startId){
+
+    public List<Node> bfsLevel1(String startId) {
 
         List<Node> result = new ArrayList<>();
 
-        // Find start node
-        Node start = null;
+        // O(1) Lookup
+        Node start = nodeIndex.get(startId);
 
-        for(Node n : graph.keySet()){
-            if(n.id.equals(startId)){
-                start = n;
-                break;
-            }
-        }
-
-        if(start == null){
+        if (start == null) {
             return result; // empty
         }
 
-        // Visited set (avoid loops)
-        Set<Node> visited = new HashSet<>();
-
-        Queue<Node> queue = new LinkedList<>();
-
-        // Start BFS
-        queue.add(start);
-        visited.add(start);
-
-        int level = 0;
-
-        while(!queue.isEmpty()){
-
-            int size = queue.size();
-
-            // One BFS layer
-            for(int i=0;i<size;i++){
-
-                Node curr = queue.poll();
-
-                // Stop at level 1
-                if(level == 1){
-                    result.add(curr);
-                    continue;
-                }
-
-                // Visit neighbors
-                for(Edge e : graph.get(curr)){
-
-                    Node next = e.to;
-
-                    if(!visited.contains(next)){
-                        visited.add(next);
-                        queue.add(next);
-                    }
-                }
+        List<Edge> edges = graph.get(start);
+        if (edges != null) {
+            for (Edge e : edges) {
+                result.add(e.to);
             }
-
-            level++;
-
-            if(level > 1) break;
         }
-
         return result;
     }
 
-    public Map<Node,List<Edge>> getGraph(){
+    public boolean dfsReachability(String fromId, String toId) {
+        Node start = nodeIndex.get(fromId);
+        Node end = nodeIndex.get(toId);
+
+        if (start == null || end == null)
+            return false;
+
+        Set<Node> visited = new HashSet<>();
+        Stack<Node> stack = new Stack<>();
+
+        stack.push(start);
+        visited.add(start);
+
+        while (!stack.isEmpty()) {
+            Node current = stack.pop();
+
+            if (current.equals(end))
+                return true;
+
+            List<Edge> neighbors = graph.get(current);
+            if (neighbors != null) {
+                for (Edge edge : neighbors) {
+                    if (!visited.contains(edge.to)) {
+                        visited.add(edge.to);
+                        stack.push(edge.to);
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    public PathResponse shortestPath(String fromId, String toId) {
+        Node start = nodeIndex.get(fromId);
+        Node end = nodeIndex.get(toId);
+
+        if (start == null || end == null)
+            return null;
+
+        Map<Node, Double> distances = new HashMap<>();
+        Map<Node, Node> previous = new HashMap<>(); // To reconstruct path
+        PriorityQueue<Node> queue = new PriorityQueue<>(Comparator.comparingDouble(distances::get));
+
+        for (Node node : nodeIndex.values()) {
+            distances.put(node, Double.MAX_VALUE);
+        }
+        distances.put(start, 0.0);
+        queue.add(start);
+
+        Set<Node> visited = new HashSet<>();
+
+        while (!queue.isEmpty()) {
+            Node current = queue.poll();
+
+            if (current.equals(end))
+                break; // Reached destination
+            if (visited.contains(current))
+                continue;
+            visited.add(current);
+
+            List<Edge> neighbors = graph.get(current);
+            if (neighbors != null) {
+                for (Edge edge : neighbors) {
+                    double newDist = distances.get(current) + edge.distance;
+                    if (newDist < distances.get(edge.to)) {
+                        distances.put(edge.to, newDist);
+                        previous.put(edge.to, current);
+                        queue.add(edge.to); // Priority queue update (add duplicate, handled by visited)
+                    }
+                }
+            }
+        }
+
+        if (distances.get(end) == Double.MAX_VALUE)
+            return null; // Unreachable
+
+        // Reconstruct path
+        List<Node> path = new LinkedList<>();
+        Node curr = end;
+        while (curr != null) {
+            path.add(0, curr);
+            curr = previous.get(curr);
+        }
+
+        return new PathResponse(distances.get(end), path);
+    }
+
+    public Map<Node, List<Edge>> getGraph() {
         return graph;
     }
 }

@@ -13,44 +13,56 @@ public class GraphController {
 
     private final GraphService service;
 
-    public GraphController(GraphService service){
-        this.service=service;
+    public GraphController(GraphService service) {
+        this.service = service;
     }
+
     @GetMapping("/bfs1/{id}")
-    public List<Node> bfs1(@PathVariable String id){
+    public List<Node> bfs1(@PathVariable String id) {
         return service.bfsLevel1(id);
     }
+
     @GetMapping("/load-file")
-    public String loadFile() throws Exception{
+    public String loadFile() throws Exception {
 
         service.loadFromFile();
 
         return "Loaded from OSM file";
     }
 
-//    @GetMapping("/load-osm")
-//    public String loadOSM() throws Exception{
-//
-//        service.loadFromOSM();
-//
-//        return "Loaded from OSM and saved to Neo4j. Nodes = "
-//                +service.getGraph().size();
-//    }
+    // @GetMapping("/load-osm")
+    // public String loadOSM() throws Exception{
+    //
+    // service.loadFromOSM();
+    //
+    // return "Loaded from OSM and saved to Neo4j. Nodes = "
+    // +service.getGraph().size();
+    // }
 
     @GetMapping("/load-db")
-    public String loadDB(){
+    public String loadDB() {
 
         service.loadFromDB();
 
         return "Loaded from Neo4j. Nodes = "
-                +service.getGraph().size();
+                + service.getGraph().size();
     }
 
     @GetMapping("/clear-db")
-    public String clear(){
+    public String clear() {
 
         service.persistToDB();
 
         return "Database refreshed.";
+    }
+
+    @GetMapping("/dfs")
+    public boolean dfs(@RequestParam String from, @RequestParam String to) {
+        return service.dfsReachability(from, to);
+    }
+
+    @GetMapping("/shortest")
+    public com.example.osmgraph.model.PathResponse shortest(@RequestParam String from, @RequestParam String to) {
+        return service.shortestPath(from, to);
     }
 }
