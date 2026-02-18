@@ -72,6 +72,11 @@ public class GraphController {
         return service.getGraphBounds();
     }
 
+    @GetMapping("/graph")
+    public com.example.osmgraph.model.GraphData getGraph() {
+        return service.getGraphData();
+    }
+
     @GetMapping("/shortest")
     public org.springframework.http.ResponseEntity<?> shortest(@RequestParam("from") String from,
             @RequestParam("to") String to) {

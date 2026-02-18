@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Node, PathResponse } from '../services/api';
+import GraphOverlay from './GraphOverlay';
 
 // OSM data bounds: lat [12.86440, 12.88858], lon [74.82913, 74.87247] → Mangalore, India
 const DEFAULT_CENTER: [number, number] = [12.8765, 74.8508]; // midpoint
@@ -39,6 +40,7 @@ const startIcon = createSvgIcon('#10b981', 'A');
 const endIcon = createSvgIcon('#ef4444', 'B');
 const waypointIcon = createSvgIcon('#6366f1', '·', 20);
 
+
 export type SelectionMode = 'start' | 'end' | null;
 
 interface MapCanvasProps {
@@ -49,6 +51,7 @@ interface MapCanvasProps {
     selectionMode: SelectionMode;
     onNodeSelect: (node: Node) => void;
     graphBounds: [[number, number], [number, number]] | null;
+    showGraph: boolean;
 }
 
 // Fits map to OSM data bounds on first load
@@ -198,6 +201,7 @@ export default function MapCanvas(props: MapCanvasProps) {
                 maxZoom={19}
             />
             <InitialBoundsFitter />
+            <GraphOverlay visible={props.showGraph} />
             <MapController {...props} />
         </MapContainer>
     );

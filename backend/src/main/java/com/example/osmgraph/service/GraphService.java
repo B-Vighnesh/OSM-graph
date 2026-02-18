@@ -362,4 +362,19 @@ public class GraphService {
         bounds.put("maxLon", maxLon);
         return bounds;
     }
+
+    public GraphData getGraphData() {
+        List<GraphData.NodeDto> nodes = new ArrayList<>();
+        List<GraphData.EdgeDto> edges = new ArrayList<>();
+
+        for (Map.Entry<Node, List<Edge>> entry : graph.entrySet()) {
+            Node from = entry.getKey();
+            nodes.add(new GraphData.NodeDto(from.id, from.lat, from.lon, from.name));
+            for (Edge edge : entry.getValue()) {
+                edges.add(new GraphData.EdgeDto(from.lat, from.lon, edge.to.lat, edge.to.lon));
+            }
+        }
+
+        return new GraphData(nodes, edges);
+    }
 }

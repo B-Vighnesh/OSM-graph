@@ -38,4 +38,5 @@ export const graphService = {
     bfs1: (id: string) => api.get<Node[]>(`/bfs1/${id}`).then(r => r.data),
     dfs: (from: string, to: string) => api.get<boolean>('/dfs', { params: { from, to } }).then(r => r.data),
     shortestPath: (from: string, to: string) => api.get<PathResponse>('/shortest', { params: { from, to } }).then(r => r.data),
+    getGraphData: () => api.get<{ nodes: any[]; edges: any[] }>('/graph').then(r => r.data),
 };

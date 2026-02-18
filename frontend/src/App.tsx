@@ -11,6 +11,7 @@ export default function App() {
     const [path, setPath] = useState<PathResponse | null>(null);
     const [bfsNodes, setBfsNodes] = useState<Node[]>([]);
     const [graphBounds, setGraphBounds] = useState<[[number, number], [number, number]] | null>(null);
+    const [showGraph, setShowGraph] = useState(false);
 
     // Load graph bounds on mount
     useEffect(() => {
@@ -61,6 +62,7 @@ export default function App() {
                     selectionMode={selectionMode}
                     onNodeSelect={handleNodeSelect}
                     graphBounds={graphBounds}
+                    showGraph={showGraph}
                 />
             </div>
 
@@ -99,6 +101,23 @@ export default function App() {
                     onClear={handleClear}
                 />
             </div>
+
+            {/* Show Graph toggle button */}
+            <button
+                onClick={() => setShowGraph(v => !v)}
+                style={{
+                    position: 'absolute', top: '16px', right: '16px', zIndex: 1000,
+                    padding: '9px 16px', borderRadius: '24px', border: `1.5px solid ${showGraph ? 'rgba(99,102,241,0.6)' : 'rgba(255,255,255,0.12)'}`,
+                    background: showGraph ? 'rgba(99,102,241,0.25)' : 'rgba(10,14,26,0.75)',
+                    backdropFilter: 'blur(12px)', color: showGraph ? '#818cf8' : '#94a3b8',
+                    fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '7px',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.4)', transition: 'all 0.2s'
+                }}
+            >
+                <span style={{ fontSize: '15px' }}>🕸</span>
+                {showGraph ? 'Hide Graph' : 'Show Graph'}
+            </button>
 
             {/* Route info overlay (bottom right) */}
             {path && (
