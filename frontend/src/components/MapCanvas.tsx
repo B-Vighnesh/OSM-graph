@@ -4,7 +4,10 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Node, PathResponse } from '../services/api';
 
-// Fix Leaflet default icon paths for Vite
+// OSM data bounds: lat [12.86440, 12.88858], lon [74.82913, 74.87247] → Mangalore, India
+const DEFAULT_CENTER: [number, number] = [12.8765, 74.8508]; // midpoint
+const DEFAULT_ZOOM = 15; // Tighter zoom to fit the OSM data area
+const OSM_BOUNDS: [[number, number], [number, number]] = [[12.86440, 74.82913], [12.88858, 74.87247]];
 const iconUrl = new URL('leaflet/dist/images/marker-icon.png', import.meta.url).href;
 const iconRetinaUrl = new URL('leaflet/dist/images/marker-icon-2x.png', import.meta.url).href;
 const shadowUrl = new URL('leaflet/dist/images/marker-shadow.png', import.meta.url).href;
@@ -48,6 +51,15 @@ interface MapCanvasProps {
     graphBounds: [[number, number], [number, number]] | null;
 }
 
+// Fits map to OSM data bounds on first load
+function InitialBoundsFitter() {
+    const map = useMap();
+    useEffect(() => {
+        map.fitBounds(OSM_BOUNDS, { padding: [20, 20] });
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    return null;
+}
+
 // Inner component that handles map events and rendering
 function MapController({
     path, startNode, endNode, bfsNodes, selectionMode, onNodeSelect, graphBounds
@@ -71,11 +83,13 @@ function MapController({
     useMapEvents({
         click(e) {
             if (!selectionMode) return;
-            // Create a synthetic node from click position
+            // Create a synthetic node from click position, trimmed to 4 decimal places
+            const lat = parseFloat(e.latlng.lat.toFixed(4));
+            const lon = parseFloat(e.latlng.lng.toFixed(4));
             const syntheticNode: Node = {
-                id: `${e.latlng.lat.toFixed(6)},${e.latlng.lng.toFixed(6)}`,
-                lat: e.latlng.lat,
-                lon: e.latlng.lng,
+                id: `${lat},${lon}`,
+                lat,
+                lon,
             };
             onNodeSelect(syntheticNode);
         },
@@ -172,8 +186,8 @@ function MapController({
 export default function MapCanvas(props: MapCanvasProps) {
     return (
         <MapContainer
-            center={[51.505, -0.09]}
-            zoom={13}
+            center={DEFAULT_CENTER}
+            zoom={DEFAULT_ZOOM}
             scrollWheelZoom
             zoomControl
             style={{ width: '100%', height: '100%' }}
@@ -183,6 +197,7 @@ export default function MapCanvas(props: MapCanvasProps) {
                 url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
                 maxZoom={19}
             />
+            <InitialBoundsFitter />
             <MapController {...props} />
         </MapContainer>
     );
