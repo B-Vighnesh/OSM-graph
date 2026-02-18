@@ -272,8 +272,10 @@ public class GraphService {
         Node start = nodeIndex.get(fromId);
         Node end = nodeIndex.get(toId);
 
-        if (start == null || end == null)
-            return null;
+        if (start == null)
+            throw new IllegalArgumentException("Start node " + fromId + " not found in graph.");
+        if (end == null)
+            throw new IllegalArgumentException("End node " + toId + " not found in graph.");
 
         Map<Node, Double> distances = new HashMap<>();
         Map<Node, Node> previous = new HashMap<>(); // To reconstruct path
@@ -325,5 +327,39 @@ public class GraphService {
 
     public Map<Node, List<Edge>> getGraph() {
         return graph;
+    }
+
+    public int getNodeCount() {
+        return nodeIndex.size();
+    }
+
+    public int getEdgeCount() {
+        return graph.values().stream().mapToInt(List::size).sum();
+    }
+
+    public Map<String, Double> getGraphBounds() {
+        if (nodeIndex.isEmpty())
+            return Collections.emptyMap();
+
+        double minLat = Double.MAX_VALUE, maxLat = -Double.MAX_VALUE;
+        double minLon = Double.MAX_VALUE, maxLon = -Double.MAX_VALUE;
+
+        for (Node n : nodeIndex.values()) {
+            if (n.lat < minLat)
+                minLat = n.lat;
+            if (n.lat > maxLat)
+                maxLat = n.lat;
+            if (n.lon < minLon)
+                minLon = n.lon;
+            if (n.lon > maxLon)
+                maxLon = n.lon;
+        }
+
+        Map<String, Double> bounds = new HashMap<>();
+        bounds.put("minLat", minLat);
+        bounds.put("maxLat", maxLat);
+        bounds.put("minLon", minLon);
+        bounds.put("maxLon", maxLon);
+        return bounds;
     }
 }

@@ -9,6 +9,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api")
+@CrossOrigin(origins = "http://localhost:5173")
 public class GraphController {
 
     private final GraphService service;
@@ -23,11 +24,11 @@ public class GraphController {
     }
 
     @GetMapping("/load-file")
-    public String loadFile() throws Exception {
-
+    public Map<String, Object> loadFile() throws Exception {
         service.loadFromFile();
-
-        return "Loaded from OSM file";
+        return Map.of(
+                "message", "Loaded from OSM file",
+                "nodeCount", service.getNodeCount());
     }
 
     // @GetMapping("/load-osm")
@@ -40,20 +41,17 @@ public class GraphController {
     // }
 
     @GetMapping("/load-db")
-    public String loadDB() {
-
+    public Map<String, Object> loadDB() {
         service.loadFromDB();
-
-        return "Loaded from Neo4j. Nodes = "
-                + service.getGraph().size();
+        return Map.of(
+                "message", "Loaded from Neo4j",
+                "nodeCount", service.getNodeCount());
     }
 
     @GetMapping("/clear-db")
-    public String clear() {
-
+    public Map<String, String> clear() {
         service.persistToDB();
-
-        return "Database refreshed.";
+        return Map.of("message", "Database refreshed and persisted.");
     }
 
     @GetMapping("/dfs")
@@ -61,8 +59,28 @@ public class GraphController {
         return service.dfsReachability(from, to);
     }
 
+    @GetMapping("/status")
+    public Map<String, Object> getStatus() {
+        return Map.of(
+                "nodeCount", service.getNodeCount(),
+                "edgeCount", service.getEdgeCount());
+    }
+
+    @GetMapping("/bounds")
+    public Map<String, Double> getBounds() {
+        return service.getGraphBounds();
+    }
+
     @GetMapping("/shortest")
-    public com.example.osmgraph.model.PathResponse shortest(@RequestParam String from, @RequestParam String to) {
-        return service.shortestPath(from, to);
+    public org.springframework.http.ResponseEntity<?> shortest(@RequestParam String from, @RequestParam String to) {
+        try {
+            com.example.osmgraph.model.PathResponse path = service.shortestPath(from, to);
+            if (path == null) {
+                return org.springframework.http.ResponseEntity.status(404).body(Map.of("message", "Path not found"));
+            }
+            return org.springframework.http.ResponseEntity.ok(path);
+        } catch (IllegalArgumentException e) {
+            return org.springframework.http.ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 }
