@@ -6,6 +6,7 @@ import com.example.osmgraph.service.GraphService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -19,7 +20,7 @@ public class GraphController {
     }
 
     @GetMapping("/bfs1/{id}")
-    public List<Node> bfs1(@PathVariable String id) {
+    public List<Node> bfs1(@PathVariable("id") String id) {
         return service.bfsLevel1(id);
     }
 
@@ -55,7 +56,7 @@ public class GraphController {
     }
 
     @GetMapping("/dfs")
-    public boolean dfs(@RequestParam String from, @RequestParam String to) {
+    public boolean dfs(@RequestParam("from") String from, @RequestParam("to") String to) {
         return service.dfsReachability(from, to);
     }
 
@@ -72,7 +73,8 @@ public class GraphController {
     }
 
     @GetMapping("/shortest")
-    public org.springframework.http.ResponseEntity<?> shortest(@RequestParam String from, @RequestParam String to) {
+    public org.springframework.http.ResponseEntity<?> shortest(@RequestParam("from") String from,
+            @RequestParam("to") String to) {
         try {
             com.example.osmgraph.model.PathResponse path = service.shortestPath(from, to);
             if (path == null) {

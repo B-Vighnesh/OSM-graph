@@ -1,0 +1,294 @@
+import { useState, useEffect, useCallback } from 'react';
+import { graphService } from '../services/api';
+import type { Node, PathResponse, StatusResponse } from '../services/api';
+import type { SelectionMode } from './MapCanvas';
+
+interface ControlPanelProps {
+    startNode: Node | null;
+    endNode: Node | null;
+    selectionMode: SelectionMode;
+    onSetSelectionMode: (mode: SelectionMode) => void;
+    onSetStartNode: (n: Node | null) => void;
+    onSetEndNode: (n: Node | null) => void;
+    onPathFound: (path: PathResponse) => void;
+    onBfsResult: (nodes: Node[]) => void;
+    onClear: () => void;
+}
+
+type Algorithm = 'shortest' | 'bfs' | 'dfs';
+
+export default function ControlPanel({
+    startNode, endNode, selectionMode,
+    onSetSelectionMode, onSetStartNode, onSetEndNode,
+    onPathFound, onBfsResult, onClear
+}: ControlPanelProps) {
+    const [algorithm, setAlgorithm] = useState<Algorithm>('shortest');
+    const [loading, setLoading] = useState(false);
+    const [status, setStatus] = useState<StatusResponse | null>(null);
+    const [result, setResult] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+    const [fromInput, setFromInput] = useState('');
+    const [toInput, setToInput] = useState('');
+    const [inputMode, setInputMode] = useState<'click' | 'type'>('click');
+
+    const refreshStatus = useCallback(() => {
+        graphService.getStatus().then(setStatus).catch(() => { });
+    }, []);
+
+    useEffect(() => {
+        refreshStatus();
+        const t = setInterval(refreshStatus, 5000);
+        return () => clearInterval(t);
+    }, [refreshStatus]);
+
+    // Sync typed inputs with selected nodes
+    useEffect(() => {
+        if (startNode) setFromInput(startNode.id);
+    }, [startNode]);
+    useEffect(() => {
+        if (endNode) setToInput(endNode.id);
+    }, [endNode]);
+
+    const handleRun = async () => {
+        const fromId = inputMode === 'type' ? fromInput.trim() : startNode?.id;
+        const toId = inputMode === 'type' ? toInput.trim() : endNode?.id;
+
+        if (algorithm === 'bfs') {
+            if (!fromId) { setResult({ type: 'error', message: 'Select or enter a Start node.' }); return; }
+            setLoading(true); setResult(null);
+            try {
+                const nodes = await graphService.bfs1(fromId);
+                onBfsResult(nodes);
+                setResult({ type: 'success', message: `BFS found ${nodes.length} neighbor(s).` });
+            } catch (e: any) {
+                setResult({ type: 'error', message: e.response?.data?.message || e.message });
+            } finally { setLoading(false); }
+            return;
+        }
+
+        if (!fromId || !toId) { setResult({ type: 'error', message: 'Select or enter both Start and End nodes.' }); return; }
+
+        setLoading(true); setResult(null);
+        try {
+            if (algorithm === 'shortest') {
+                const path = await graphService.shortestPath(fromId, toId);
+                onPathFound(path);
+                const km = (path.totalDistance / 1000).toFixed(2);
+                setResult({ type: 'success', message: `Route found! ${km} km · ${path.path.length} nodes` });
+            } else {
+                const reachable = await graphService.dfs(fromId, toId);
+                setResult({ type: reachable ? 'success' : 'info', message: reachable ? '✓ Path exists (DFS confirmed)' : '✗ No path found between these nodes' });
+            }
+        } catch (e: any) {
+            setResult({ type: 'error', message: e.response?.data?.message || e.message });
+        } finally { setLoading(false); }
+    };
+
+    const handleLoadFile = async () => {
+        setLoading(true); setResult(null);
+        try {
+            const r = await graphService.loadFile();
+            setResult({ type: 'success', message: `Loaded ${r.nodeCount.toLocaleString()} nodes from file.` });
+            refreshStatus();
+        } catch (e: any) { setResult({ type: 'error', message: e.response?.data?.message || e.message }); }
+        finally { setLoading(false); }
+    };
+
+    const handleLoadDb = async () => {
+        setLoading(true); setResult(null);
+        try {
+            const r = await graphService.loadDb();
+            setResult({ type: 'success', message: `Loaded ${r.nodeCount.toLocaleString()} nodes from DB.` });
+            refreshStatus();
+        } catch (e: any) { setResult({ type: 'error', message: e.response?.data?.message || e.message }); }
+        finally { setLoading(false); }
+    };
+
+    const handleClear = () => {
+        onClear();
+        setResult(null);
+        setFromInput('');
+        setToInput('');
+    };
+
+    const isRunDisabled = loading || (algorithm !== 'bfs' && !((inputMode === 'click' ? startNode?.id : fromInput) && (inputMode === 'click' ? endNode?.id : toInput)));
+
+    return (
+        <div className="animate-slide-in" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+
+            {/* Header Card */}
+            <div className="glass" style={{ borderRadius: '16px', padding: '16px 20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                        <h1 style={{ fontSize: '18px', fontWeight: 700, background: 'linear-gradient(135deg, #818cf8, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                            OSM Graph
+                        </h1>
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Graph Traversal Explorer</p>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end' }}>
+                            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: status && status.nodeCount > 0 ? 'var(--success)' : 'var(--error)', boxShadow: status && status.nodeCount > 0 ? '0 0 8px var(--success)' : 'none' }} className={status && status.nodeCount > 0 ? 'animate-glow' : ''} />
+                            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                                {status ? `${status.nodeCount.toLocaleString()} nodes` : 'Connecting...'}
+                            </span>
+                        </div>
+                        {status && <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{status.edgeCount.toLocaleString()} edges</span>}
+                    </div>
+                </div>
+            </div>
+
+            {/* Data Management */}
+            <div className="glass" style={{ borderRadius: '16px', padding: '16px' }}>
+                <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>Data Source</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <button className="btn btn-secondary" onClick={handleLoadFile} disabled={loading} style={{ fontSize: '12px', padding: '9px 12px' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
+                        Load File
+                    </button>
+                    <button className="btn btn-secondary" onClick={handleLoadDb} disabled={loading} style={{ fontSize: '12px', padding: '9px 12px' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" /><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" /></svg>
+                        Load DB
+                    </button>
+                </div>
+            </div>
+
+            {/* Node Selection */}
+            <div className="glass" style={{ borderRadius: '16px', padding: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Route</p>
+                    <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: '6px', padding: '2px' }}>
+                        {(['click', 'type'] as const).map(m => (
+                            <button key={m} onClick={() => setInputMode(m)} style={{ padding: '4px 10px', borderRadius: '4px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 500, background: inputMode === m ? 'var(--accent)' : 'transparent', color: inputMode === m ? 'white' : 'var(--text-muted)', transition: 'all 0.2s' }}>
+                                {m === 'click' ? '🖱 Click' : '⌨ Type'}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {inputMode === 'click' ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {/* Start node selector */}
+                        <button
+                            onClick={() => onSetSelectionMode(selectionMode === 'start' ? null : 'start')}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
+                                borderRadius: '10px', border: `1.5px solid ${selectionMode === 'start' ? 'var(--node-start)' : startNode ? 'rgba(16,185,129,0.3)' : 'var(--border)'}`,
+                                background: selectionMode === 'start' ? 'rgba(16,185,129,0.1)' : startNode ? 'rgba(16,185,129,0.05)' : 'rgba(0,0,0,0.2)',
+                                cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left', width: '100%',
+                                boxShadow: selectionMode === 'start' ? '0 0 12px rgba(16,185,129,0.2)' : 'none'
+                            }}
+                        >
+                            <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: startNode ? 'var(--node-start)' : 'rgba(16,185,129,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `2px solid ${startNode ? 'var(--node-start)' : 'rgba(16,185,129,0.3)'}` }}>
+                                <span style={{ fontSize: '12px', fontWeight: 700, color: startNode ? 'white' : 'var(--node-start)' }}>A</span>
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '1px' }}>Start Node</div>
+                                <div style={{ fontSize: '12px', color: startNode ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: startNode ? 500 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {startNode ? startNode.id : selectionMode === 'start' ? '📍 Click on map...' : 'Click to select'}
+                                </div>
+                            </div>
+                            {startNode && (
+                                <button onClick={e => { e.stopPropagation(); onSetStartNode(null); setFromInput(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px', fontSize: '14px' }}>✕</button>
+                            )}
+                        </button>
+
+                        {/* End node selector */}
+                        <button
+                            onClick={() => onSetSelectionMode(selectionMode === 'end' ? null : 'end')}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
+                                borderRadius: '10px', border: `1.5px solid ${selectionMode === 'end' ? 'var(--node-end)' : endNode ? 'rgba(239,68,68,0.3)' : 'var(--border)'}`,
+                                background: selectionMode === 'end' ? 'rgba(239,68,68,0.1)' : endNode ? 'rgba(239,68,68,0.05)' : 'rgba(0,0,0,0.2)',
+                                cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left', width: '100%',
+                                boxShadow: selectionMode === 'end' ? '0 0 12px rgba(239,68,68,0.2)' : 'none'
+                            }}
+                        >
+                            <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: endNode ? 'var(--node-end)' : 'rgba(239,68,68,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `2px solid ${endNode ? 'var(--node-end)' : 'rgba(239,68,68,0.3)'}` }}>
+                                <span style={{ fontSize: '12px', fontWeight: 700, color: endNode ? 'white' : 'var(--node-end)' }}>B</span>
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '1px' }}>End Node</div>
+                                <div style={{ fontSize: '12px', color: endNode ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: endNode ? 500 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {endNode ? endNode.id : selectionMode === 'end' ? '📍 Click on map...' : 'Click to select'}
+                                </div>
+                            </div>
+                            {endNode && (
+                                <button onClick={e => { e.stopPropagation(); onSetEndNode(null); setToInput(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px', fontSize: '14px' }}>✕</button>
+                            )}
+                        </button>
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <input className="input" placeholder="Start Node ID" value={fromInput} onChange={e => setFromInput(e.target.value)} style={{ fontSize: '12px' }} />
+                        <input className="input" placeholder="End Node ID (not needed for BFS)" value={toInput} onChange={e => setToInput(e.target.value)} style={{ fontSize: '12px' }} />
+                    </div>
+                )}
+            </div>
+
+            {/* Algorithm Selection */}
+            <div className="glass" style={{ borderRadius: '16px', padding: '16px' }}>
+                <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>Algorithm</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '12px' }}>
+                    {([
+                        { id: 'shortest', label: 'Shortest', icon: '🗺' },
+                        { id: 'bfs', label: 'BFS', icon: '🔵' },
+                        { id: 'dfs', label: 'DFS', icon: '🔴' },
+                    ] as const).map(alg => (
+                        <button
+                            key={alg.id}
+                            onClick={() => setAlgorithm(alg.id)}
+                            style={{
+                                padding: '8px 6px', borderRadius: '8px', border: `1.5px solid ${algorithm === alg.id ? 'var(--border-active)' : 'var(--border)'}`,
+                                background: algorithm === alg.id ? 'var(--accent-glow)' : 'rgba(0,0,0,0.2)',
+                                cursor: 'pointer', transition: 'all 0.2s', fontSize: '11px', fontWeight: 600,
+                                color: algorithm === alg.id ? 'var(--accent-hover)' : 'var(--text-secondary)',
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px'
+                            }}
+                        >
+                            <span style={{ fontSize: '16px' }}>{alg.icon}</span>
+                            {alg.label}
+                        </button>
+                    ))}
+                </div>
+
+                <button
+                    className="btn btn-primary"
+                    onClick={handleRun}
+                    disabled={isRunDisabled}
+                    style={{ width: '100%', fontSize: '13px', padding: '11px', borderRadius: '10px', position: 'relative', overflow: 'hidden' }}
+                >
+                    {loading ? (
+                        <>
+                            <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
+                            Running...
+                        </>
+                    ) : (
+                        <>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                            Run {algorithm === 'shortest' ? 'Shortest Path' : algorithm === 'bfs' ? 'BFS' : 'DFS'}
+                        </>
+                    )}
+                </button>
+            </div>
+
+            {/* Result */}
+            {result && (
+                <div className="animate-fade-in glass" style={{
+                    borderRadius: '12px', padding: '12px 14px',
+                    borderColor: result.type === 'success' ? 'rgba(16,185,129,0.3)' : result.type === 'error' ? 'rgba(239,68,68,0.3)' : 'rgba(99,102,241,0.3)',
+                    background: result.type === 'success' ? 'rgba(16,185,129,0.08)' : result.type === 'error' ? 'rgba(239,68,68,0.08)' : 'rgba(99,102,241,0.08)',
+                }}>
+                    <p style={{ fontSize: '12px', color: result.type === 'success' ? 'var(--success)' : result.type === 'error' ? 'var(--error)' : 'var(--accent-hover)', lineHeight: 1.5 }}>
+                        {result.message}
+                    </p>
+                </div>
+            )}
+
+            {/* Clear button */}
+            {(startNode || endNode) && (
+                <button className="btn btn-ghost animate-fade-in" onClick={handleClear} style={{ width: '100%', fontSize: '12px', color: 'var(--text-muted)' }}>
+                    Clear Route
+                </button>
+            )}
+        </div>
+    );
+}
