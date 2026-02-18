@@ -80,6 +80,7 @@ public class GraphController {
     @GetMapping("/shortest")
     public org.springframework.http.ResponseEntity<?> shortest(@RequestParam("from") String from,
             @RequestParam("to") String to) {
+
         try {
             com.example.osmgraph.model.PathResponse path = service.shortestPath(from, to);
             if (path == null) {

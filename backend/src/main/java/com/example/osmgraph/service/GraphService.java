@@ -216,32 +216,6 @@ public class GraphService {
         System.out.println("Edges loaded: " + edgeCount);
     }
 
-    private Node findNode(String id) {
-        // 1. Try direct ID match
-        Node n = nodeIndex.get(id);
-        if (n != null)
-            return n;
-
-        // 2. Try parsing as "lat,lon"
-        if (id.contains(",")) {
-            try {
-                String[] parts = id.split(",");
-                double lat = Double.parseDouble(parts[0]);
-                double lon = Double.parseDouble(parts[1]);
-
-                // Find ANY node with these coordinates (or very close)
-                for (Node node : nodeIndex.values()) {
-                    if (Math.abs(node.lat - lat) < 0.0001 && Math.abs(node.lon - lon) < 0.0001) {
-                        return node;
-                    }
-                }
-            } catch (NumberFormatException e) {
-                // Not a coordinate string
-            }
-        }
-        return null;
-    }
-
     public List<Node> bfsLevel1(String startId) {
 
         List<Node> result = new ArrayList<>();
@@ -293,10 +267,64 @@ public class GraphService {
         }
         return false;
     }
+    private Node findNode(String input) {
+
+        // 1️⃣ Try direct ID match first
+        Node byId = nodeIndex.get(input);
+        if (byId != null) {
+            return byId;
+        }
+
+        // 2️⃣ Check if input is lat,lon
+        if (input == null || !input.contains(",")) {
+            return null;
+        }
+
+        String[] parts = input.split(",");
+
+        if (parts.length != 2) {
+            return null;
+        }
+
+        try {
+            double lat = Double.parseDouble(parts[0].trim());
+            double lon = Double.parseDouble(parts[1].trim());
+
+            return findByLatLon(lat, lon);
+
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+    private Node findByLatLon(double lat, double lon) {
+
+        double epsilon = 0.0001; // ~11 meters
+
+        Node closest = null;
+        double minDist = Double.MAX_VALUE;
+
+        for (Node node : nodeIndex.values()) {
+
+            double dLat = node.lat - lat;
+            double dLon = node.lon - lon;
+
+            double dist = dLat * dLat + dLon * dLon;
+
+            if (dist < minDist) {
+                minDist = dist;
+                closest = node;
+            }
+        }
+
+        return closest;
+    }
+
 
     public PathResponse shortestPath(String fromId, String toId) {
-        Node start = findNode(fromId);
-        Node end = findNode(toId);
+        Node start=findNode(fromId), end=findNode(toId);
+
+
+
 
         if (start == null)
             throw new IllegalArgumentException("Start node " + fromId + " not found in graph.");
