@@ -216,12 +216,38 @@ public class GraphService {
         System.out.println("Edges loaded: " + edgeCount);
     }
 
+    private Node findNode(String id) {
+        // 1. Try direct ID match
+        Node n = nodeIndex.get(id);
+        if (n != null)
+            return n;
+
+        // 2. Try parsing as "lat,lon"
+        if (id.contains(",")) {
+            try {
+                String[] parts = id.split(",");
+                double lat = Double.parseDouble(parts[0]);
+                double lon = Double.parseDouble(parts[1]);
+
+                // Find ANY node with these coordinates (or very close)
+                for (Node node : nodeIndex.values()) {
+                    if (Math.abs(node.lat - lat) < 0.0001 && Math.abs(node.lon - lon) < 0.0001) {
+                        return node;
+                    }
+                }
+            } catch (NumberFormatException e) {
+                // Not a coordinate string
+            }
+        }
+        return null;
+    }
+
     public List<Node> bfsLevel1(String startId) {
 
         List<Node> result = new ArrayList<>();
 
-        // O(1) Lookup
-        Node start = nodeIndex.get(startId);
+        // Lookup with coordinate support
+        Node start = findNode(startId);
 
         if (start == null) {
             return result; // empty
@@ -237,8 +263,8 @@ public class GraphService {
     }
 
     public boolean dfsReachability(String fromId, String toId) {
-        Node start = nodeIndex.get(fromId);
-        Node end = nodeIndex.get(toId);
+        Node start = findNode(fromId);
+        Node end = findNode(toId);
 
         if (start == null || end == null)
             return false;
@@ -269,8 +295,8 @@ public class GraphService {
     }
 
     public PathResponse shortestPath(String fromId, String toId) {
-        Node start = nodeIndex.get(fromId);
-        Node end = nodeIndex.get(toId);
+        Node start = findNode(fromId);
+        Node end = findNode(toId);
 
         if (start == null)
             throw new IllegalArgumentException("Start node " + fromId + " not found in graph.");
