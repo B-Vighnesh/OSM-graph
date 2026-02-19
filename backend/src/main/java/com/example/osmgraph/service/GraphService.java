@@ -28,7 +28,7 @@ public class GraphService {
 
     public synchronized void loadFromFile() throws Exception {
 
-        String path = "src/main/resources/osm/map.osm";
+        String path = "src/main/resources/osm/kundapura.osm";
 
         graph.clear();
         nodeIndex.clear();
@@ -36,13 +36,11 @@ public class GraphService {
         Map<Node, List<Edge>> parsed = parser.parse(path);
 
         graph.putAll(parsed);
-
-        // Build index
         for (Node n : graph.keySet()) {
             nodeIndex.put(n.id, n);
         }
 
-        persistToDB();
+//        persistToDB();
     }
 
     private void connect(Node a, Node b) {
@@ -321,11 +319,8 @@ public class GraphService {
 
 
     public PathResponse shortestPath(String fromId, String toId) {
-        Node start=findNode(fromId), end=findNode(toId);
-
-
-
-
+        Node start=findNode(fromId);
+        Node end=findNode(toId);
         if (start == null)
             throw new IllegalArgumentException("Start node " + fromId + " not found in graph.");
         if (end == null)

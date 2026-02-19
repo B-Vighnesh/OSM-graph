@@ -6,9 +6,8 @@ import type { Node, PathResponse } from '../services/api';
 import GraphOverlay from './GraphOverlay';
 
 // OSM data bounds: lat [12.86440, 12.88858], lon [74.82913, 74.87247] → Mangalore, India
-const DEFAULT_CENTER: [number, number] = [12.8765, 74.8508]; // midpoint
-const DEFAULT_ZOOM = 15; // Tighter zoom to fit the OSM data area
-const OSM_BOUNDS: [[number, number], [number, number]] = [[12.86440, 74.82913], [12.88858, 74.87247]];
+const DEFAULT_CENTER: [number, number] = [12.8765, 74.8508]; // fallback center
+const DEFAULT_ZOOM = 12; // fallback zoom
 const iconUrl = new URL('leaflet/dist/images/marker-icon.png', import.meta.url).href;
 const iconRetinaUrl = new URL('leaflet/dist/images/marker-icon-2x.png', import.meta.url).href;
 const shadowUrl = new URL('leaflet/dist/images/marker-shadow.png', import.meta.url).href;
@@ -54,12 +53,18 @@ interface MapCanvasProps {
     showGraph: boolean;
 }
 
-// Fits map to OSM data bounds on first load
-function InitialBoundsFitter() {
+// Fits map to graph bounds when they become available
+function InitialBoundsFitter({ bounds }: { bounds: [[number, number], [number, number]] | null }) {
     const map = useMap();
+    const zoomedRef = useRef(false);
+
     useEffect(() => {
-        map.fitBounds(OSM_BOUNDS, { padding: [20, 20] });
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+        if (bounds && !zoomedRef.current) {
+            map.fitBounds(bounds, { padding: [20, 20] });
+            zoomedRef.current = true;
+        }
+    }, [map, bounds]);
+
     return null;
 }
 
@@ -200,7 +205,7 @@ export default function MapCanvas(props: MapCanvasProps) {
                 url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
                 maxZoom={19}
             />
-            <InitialBoundsFitter />
+            <InitialBoundsFitter bounds={props.graphBounds} />
             <GraphOverlay visible={props.showGraph} />
             <MapController {...props} />
         </MapContainer>
