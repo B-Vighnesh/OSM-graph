@@ -113,6 +113,7 @@ export default function App() {
                 <ControlPanel
                     startNode={startNode}
                     endNode={endNode}
+                    currentLocation={currentLocation}
                     selectionMode={selectionMode}
                     onSetSelectionMode={setSelectionMode}
                     onSetStartNode={setStartNode}

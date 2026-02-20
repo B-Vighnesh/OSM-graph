@@ -4,6 +4,7 @@ import { graphService } from '../services/api';
 export default function ControlPanel({
     startNode,
     endNode,
+    currentLocation,
     selectionMode,
     onSetSelectionMode,
     onSetStartNode,
@@ -170,6 +171,21 @@ export default function ControlPanel({
         setToInput('');
     };
 
+    const handleUseMyLocationAsStart = () => {
+        if (!currentLocation) {
+            setResult({ type: 'error', message: 'Current location is not available yet.' });
+            return;
+        }
+
+        const lat = parseFloat(currentLocation.lat.toFixed(4));
+        const lon = parseFloat(currentLocation.lon.toFixed(4));
+        const startFromLocation = { id: `${lat},${lon}`, lat, lon, name: 'My Location' };
+        onSetStartNode(startFromLocation);
+        setFromInput(startFromLocation.id);
+        onSetSelectionMode(algorithm === 'bfs' ? null : 'end');
+        setResult({ type: 'success', message: 'Start node set from your current location.' });
+    };
+
     const isRunDisabled =
         loading ||
         (algorithm === 'bfs'
@@ -239,6 +255,14 @@ export default function ControlPanel({
                         ))}
                     </div>
                 </div>
+                <button
+                    className="btn btn-secondary"
+                    onClick={handleUseMyLocationAsStart}
+                    disabled={loading || !currentLocation}
+                    style={{ width: '100%', fontSize: '12px', padding: '8px 12px', marginBottom: '10px' }}
+                >
+                    Use My Location as A
+                </button>
 
                 {inputMode === 'click' ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

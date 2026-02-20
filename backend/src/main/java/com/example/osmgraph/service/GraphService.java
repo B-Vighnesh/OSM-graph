@@ -28,7 +28,7 @@ public class GraphService {
 
     public synchronized void loadFromFile() throws Exception {
 
-        String path = "src/main/resources/osm/kundapura.osm";
+        String path = "src/main/resources/osm/map.osm";
 
         graph.clear();
         nodeIndex.clear();
