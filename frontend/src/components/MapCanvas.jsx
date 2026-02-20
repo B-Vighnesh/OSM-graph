@@ -35,7 +35,8 @@ function createSvgIcon(color, label, size = 36) {
 
 const startIcon = createSvgIcon('#10b981', 'A');
 const endIcon = createSvgIcon('#ef4444', 'B');
-const waypointIcon = createSvgIcon('#0ea5e9', '.', 20);
+const waypointBlueIcon = createSvgIcon('#0ea5e9', '.', 20);
+const waypointOrangeIcon = createSvgIcon('#f97316', '.', 20);
 
 function InitialBoundsFitter({ bounds }) {
     const map = useMap();
@@ -59,6 +60,7 @@ function MapController({
     selectionMode,
     onNodeSelect,
     graphBounds,
+    showGraph,
 }) {
     const map = useMap();
     const layerGroupRef = useRef(L.layerGroup());
@@ -101,6 +103,9 @@ function MapController({
         layerGroupRef.current.clearLayers();
         pathLayerRef.current.clearLayers();
         if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+        const routeBaseColor = showGraph ? '#fdba74' : '#38bdf8';
+        const routeMainColor = showGraph ? '#ea580c' : '#0284c7';
+        const routeWaypointIcon = showGraph ? waypointOrangeIcon : waypointBlueIcon;
 
         if (startNode) {
             const marker = L.marker([startNode.lat, startNode.lon], { icon: startIcon, zIndexOffset: 1000 });
@@ -130,9 +135,9 @@ function MapController({
             const coords = path.path.map(node => [node.lat, node.lon]);
 
             L.polyline(coords, {
-                color: '#38bdf8',
+                color: routeBaseColor,
                 weight: 6,
-                opacity: 0.15,
+                opacity: 0.22,
                 lineCap: 'round',
                 lineJoin: 'round',
             }).addTo(pathLayerRef.current);
@@ -142,7 +147,7 @@ function MapController({
                 if (i >= coords.length) {
                     path.path.slice(1, -1).forEach((node, idx) => {
                         if (idx % 3 === 0) {
-                            L.marker([node.lat, node.lon], { icon: waypointIcon, zIndexOffset: 100 })
+                            L.marker([node.lat, node.lon], { icon: routeWaypointIcon, zIndexOffset: 100 })
                                 .addTo(pathLayerRef.current);
                         }
                     });
@@ -150,7 +155,7 @@ function MapController({
                 }
 
                 L.polyline([coords[i - 1], coords[i]], {
-                    color: '#0284c7',
+                    color: routeMainColor,
                     weight: 5,
                     opacity: 0.9,
                     lineCap: 'round',
@@ -182,7 +187,7 @@ function MapController({
         return () => {
             if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
         };
-    }, [path, startNode, endNode, bfsNodes, graphBounds, map]);
+    }, [path, startNode, endNode, bfsNodes, graphBounds, map, showGraph]);
 
     return null;
 }

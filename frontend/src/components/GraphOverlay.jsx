@@ -37,14 +37,14 @@ export default function GraphOverlay({ visible }) {
             data.nodes.forEach(node => {
                 const circle = L.circleMarker([node.lat, node.lon], {
                     radius: 3,
-                    color: '#0ea5e9',
-                    fillColor: '#38bdf8',
-                    fillOpacity: 0.9,
+                    color: '#64748b',
+                    fillColor: '#94a3b8',
+                    fillOpacity: 0.8,
                     weight: 1,
                 });
                 circle.bindPopup(
                     `<div style="font-family:Inter,sans-serif;font-size:12px">
-            <b style="color:#0284c7">Node</b><br>
+            <b style="color:#475569">Node</b><br>
             <span style="color:#64748b;font-size:11px">ID: ${node.id}</span>
             ${node.name ? `<br><span style="color:#64748b">${node.name}</span>` : ''}
           </div>`

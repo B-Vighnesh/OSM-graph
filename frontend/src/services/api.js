@@ -6,6 +6,13 @@ const api = axios.create({ baseURL: API_BASE });
 
 export const graphService = {
     loadFile: () => api.get('/load-file').then(r => r.data),
+    uploadOsm: (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return api.post('/upload-file', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        }).then(r => r.data);
+    },
     loadDb: () => api.get('/load-db').then(r => r.data),
     clearDb: () => api.get('/clear-db').then(r => r.data),
     getStatus: () => api.get('/status').then(r => r.data),
