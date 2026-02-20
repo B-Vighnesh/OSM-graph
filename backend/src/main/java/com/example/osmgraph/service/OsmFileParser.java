@@ -17,11 +17,9 @@ import java.util.*;
 @Service
 public class OsmFileParser {
 
-    private final Map<String, Node> nodeMap = new HashMap<>();
-    private final Map<Node, List<Edge>> graph = new HashMap<>();
-
-
     public Map<Node,List<Edge>> parse(String path) throws Exception {
+        final Map<String, Node> nodeMap = new HashMap<>();
+        final Map<Node, List<Edge>> graph = new HashMap<>();
 
         File file = new File(path);
 
@@ -86,8 +84,8 @@ public class OsmFileParser {
                         a.name = roadName;
                         b.name = roadName;
 
-                        connect(a,b);
-                        connect(b,a);
+                        connect(a,b,graph);
+                        connect(b,a,graph);
                     }
                 }
             }
@@ -103,7 +101,7 @@ public class OsmFileParser {
     }
 
 
-    private void connect(Node a,Node b){
+    private void connect(Node a,Node b, Map<Node, List<Edge>> graph){
 
         double d = distance(a,b);
 

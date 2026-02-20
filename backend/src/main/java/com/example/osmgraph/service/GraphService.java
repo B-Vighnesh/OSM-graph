@@ -33,7 +33,9 @@ public class GraphService {
 
     public synchronized void loadFromFile() throws Exception {
 
-        String path = "src/main/resources/osm/map.osm";
+        String defaultPath = "src/main/resources/osm/map.osm";
+        Path uploadedPath = Paths.get("uploads", "map.osm");
+        String path = Files.exists(uploadedPath) ? uploadedPath.toString() : defaultPath;
 
         graph.clear();
         nodeIndex.clear();
