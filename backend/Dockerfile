@@ -17,4 +17,4 @@ RUN mvn clean package -DskipTests
 EXPOSE 8080
 
 # Run app
-CMD ["java", "-jar", "target/*.jar"]
+CMD ["java", "-jar", "target/osmgraph-1.0.0.jar"]
