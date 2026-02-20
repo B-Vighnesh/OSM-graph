@@ -120,8 +120,8 @@ export default function App() {
                 onClick={() => setShowGraph(v => !v)}
                 style={{
                     position: 'absolute',
-                    top: '16px',
-                    right: '16px',
+                    top: '28px',
+                    right: '60px',
                     zIndex: 1000,
                     padding: '9px 16px',
                     borderRadius: '24px',
