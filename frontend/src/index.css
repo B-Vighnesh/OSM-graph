@@ -355,6 +355,164 @@ body,
     margin: 12px 0;
 }
 
+/* App layout */
+.app-shell {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--bg-primary);
+}
+
+.app-map-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+}
+
+.app-selection-banner {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    max-width: calc(100vw - 220px);
+    padding: 10px 20px;
+    border-radius: 24px;
+    backdrop-filter: blur(12px);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.22);
+    animation: fadeIn 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.app-sidebar {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    bottom: 16px;
+    width: 320px;
+    z-index: 500;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+}
+
+.app-graph-toggle {
+    position: absolute;
+    top: 74px;
+    right: 16px;
+    z-index: 1000;
+    padding: 9px 16px;
+    border-radius: 24px;
+    backdrop-filter: blur(12px);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.15);
+    transition: all 0.2s;
+}
+
+.app-route-summary {
+    position: absolute;
+    right: 24px;
+    bottom: 24px;
+    z-index: 500;
+    border-radius: 14px;
+    padding: 14px 18px;
+    min-width: 200px;
+    box-shadow: var(--shadow-lg);
+}
+
+.leaflet-top.leaflet-right .leaflet-control {
+    margin-top: 14px;
+    margin-right: 12px;
+}
+
+@media (max-width: 1100px) {
+    .app-sidebar {
+        width: 292px;
+    }
+
+    .app-selection-banner {
+        max-width: calc(100vw - 140px);
+    }
+}
+
+@media (max-width: 900px) {
+    .app-sidebar {
+        top: auto;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        width: auto;
+        max-height: 52vh;
+        padding-top: 4px;
+    }
+
+    .app-route-summary {
+        left: 10px;
+        right: 10px;
+        bottom: calc(52vh + 18px);
+        min-width: 0;
+    }
+
+    .app-selection-banner {
+        top: 10px;
+        max-width: calc(100vw - 90px);
+        font-size: 12px;
+        padding: 8px 14px;
+    }
+
+    .app-graph-toggle {
+        top: 66px;
+        right: 10px;
+        padding: 8px 12px;
+    }
+
+    .leaflet-top.leaflet-right .leaflet-control {
+        margin-top: 10px;
+        margin-right: 8px;
+    }
+}
+
+@media (max-width: 600px) {
+    .app-selection-banner {
+        left: 10px;
+        right: 70px;
+        transform: none;
+        max-width: none;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .app-sidebar {
+        max-height: 58vh;
+    }
+
+    .app-route-summary {
+        bottom: calc(58vh + 16px);
+        padding: 10px 12px;
+        border-radius: 12px;
+    }
+
+    .app-graph-toggle {
+        top: 62px;
+        right: 8px;
+        font-size: 11px;
+    }
+}
+
 /* Custom Leaflet marker styles */
 .custom-marker-start,
 .custom-marker-end,

@@ -50,8 +50,8 @@ export default function App() {
     }, []);
 
     return (
-        <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden', background: 'var(--bg-primary)' }}>
-            <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+        <div className="app-shell">
+            <div className="app-map-layer">
                 <MapCanvas
                     path={path}
                     startNode={startNode}
@@ -65,44 +65,20 @@ export default function App() {
             </div>
 
             {selectionMode && (
-                <div style={{
-                    position: 'absolute',
-                    top: '16px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    zIndex: 1000,
-                    padding: '10px 20px',
-                    borderRadius: '24px',
-                    background: selectionMode === 'start' ? 'rgba(16,185,129,0.9)' : 'rgba(239,68,68,0.9)',
-                    backdropFilter: 'blur(12px)',
-                    color: 'white',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    boxShadow: '0 8px 20px rgba(15,23,42,0.22)',
-                    animation: 'fadeIn 0.3s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    cursor: 'pointer',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                }} onClick={() => setSelectionMode(null)}>
+                <div
+                    className="app-selection-banner"
+                    style={{
+                        background: selectionMode === 'start' ? 'rgba(16,185,129,0.9)' : 'rgba(239,68,68,0.9)',
+                    }}
+                    onClick={() => setSelectionMode(null)}
+                >
                     <span style={{ fontSize: '16px' }}>+</span>
                     Click on map to select {selectionMode === 'start' ? 'Start (A)' : 'End (B)'} node
                     <span style={{ opacity: 0.7, marginLeft: '4px' }}>x</span>
                 </div>
             )}
 
-            <div style={{
-                position: 'absolute',
-                top: '16px',
-                left: '16px',
-                bottom: '16px',
-                width: '320px',
-                zIndex: 500,
-                overflowY: 'auto',
-                overflowX: 'hidden',
-                scrollbarWidth: 'thin',
-            }}>
+            <div className="app-sidebar">
                 <ControlPanel
                     startNode={startNode}
                     endNode={endNode}
@@ -117,26 +93,12 @@ export default function App() {
             </div>
 
             <button
+                className="app-graph-toggle"
                 onClick={() => setShowGraph(v => !v)}
                 style={{
-                    position: 'absolute',
-                    top: '28px',
-                    right: '60px',
-                    zIndex: 1000,
-                    padding: '9px 16px',
-                    borderRadius: '24px',
                     border: `1.5px solid ${showGraph ? 'rgba(14,165,233,0.55)' : 'var(--border)'}`,
                     background: showGraph ? 'rgba(14,165,233,0.16)' : 'rgba(255,255,255,0.82)',
-                    backdropFilter: 'blur(12px)',
                     color: showGraph ? '#0284c7' : 'var(--text-secondary)',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '7px',
-                    boxShadow: '0 8px 20px rgba(15,23,42,0.15)',
-                    transition: 'all 0.2s',
                 }}
             >
                 <span style={{ fontSize: '15px' }}>#</span>
@@ -144,16 +106,7 @@ export default function App() {
             </button>
 
             {path && (
-                <div className="glass animate-fade-in" style={{
-                    position: 'absolute',
-                    bottom: '24px',
-                    right: '24px',
-                    zIndex: 500,
-                    borderRadius: '14px',
-                    padding: '14px 18px',
-                    minWidth: '200px',
-                    boxShadow: 'var(--shadow-lg)',
-                }}>
+                <div className="glass animate-fade-in app-route-summary">
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                         Route Summary
                     </div>
