@@ -1,34 +1,18 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { graphService } from '../services/api';
 
-interface GraphNode {
-    id: string;
-    lat: number;
-    lon: number;
-    name?: string;
-}
-
-interface GraphEdge {
-    fromLat: number;
-    fromLon: number;
-    toLat: number;
-    toLon: number;
-}
-
-interface GraphOverlayProps {
-    visible: boolean;
-}
-
-export default function GraphOverlay({ visible }: GraphOverlayProps) {
+export default function GraphOverlay({ visible }) {
     const map = useMap();
-    const layerRef = useRef<L.LayerGroup>(L.layerGroup());
+    const layerRef = useRef(L.layerGroup());
     const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {
         layerRef.current.addTo(map);
-        return () => { layerRef.current.remove(); };
+        return () => {
+            layerRef.current.remove();
+        };
     }, [map]);
 
     useEffect(() => {
@@ -38,33 +22,31 @@ export default function GraphOverlay({ visible }: GraphOverlayProps) {
             return;
         }
 
-        if (loaded) return; // Already rendered
+        if (loaded) return;
 
         graphService.getGraphData().then(data => {
             layerRef.current.clearLayers();
 
-            // Draw edges first (below nodes)
-            data.edges.forEach((edge: GraphEdge) => {
+            data.edges.forEach(edge => {
                 L.polyline(
                     [[edge.fromLat, edge.fromLon], [edge.toLat, edge.toLon]],
-                    { color: '#334155', weight: 1.5, opacity: 0.7 }
+                    { color: '#94a3b8', weight: 1.4, opacity: 0.65 }
                 ).addTo(layerRef.current);
             });
 
-            // Draw nodes as small circles
-            data.nodes.forEach((node: GraphNode) => {
+            data.nodes.forEach(node => {
                 const circle = L.circleMarker([node.lat, node.lon], {
                     radius: 3,
-                    color: '#6366f1',
-                    fillColor: '#818cf8',
+                    color: '#0ea5e9',
+                    fillColor: '#38bdf8',
                     fillOpacity: 0.9,
                     weight: 1,
                 });
                 circle.bindPopup(
                     `<div style="font-family:Inter,sans-serif;font-size:12px">
-            <b style="color:#818cf8">Node</b><br>
-            <span style="color:#94a3b8;font-size:11px">ID: ${node.id}</span>
-            ${node.name ? `<br><span style="color:#94a3b8">${node.name}</span>` : ''}
+            <b style="color:#0284c7">Node</b><br>
+            <span style="color:#64748b;font-size:11px">ID: ${node.id}</span>
+            ${node.name ? `<br><span style="color:#64748b">${node.name}</span>` : ''}
           </div>`
                 );
                 circle.addTo(layerRef.current);
@@ -74,7 +56,7 @@ export default function GraphOverlay({ visible }: GraphOverlayProps) {
         }).catch(err => {
             console.error('Failed to load graph data:', err);
         });
-    }, [visible, loaded, map]);
+    }, [visible, loaded]);
 
     return null;
 }

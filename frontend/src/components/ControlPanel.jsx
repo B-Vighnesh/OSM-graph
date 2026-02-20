@@ -1,49 +1,39 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { graphService } from '../services/api';
-import type { Node, PathResponse, StatusResponse } from '../services/api';
-import type { SelectionMode } from './MapCanvas';
-
-interface ControlPanelProps {
-    startNode: Node | null;
-    endNode: Node | null;
-    selectionMode: SelectionMode;
-    onSetSelectionMode: (mode: SelectionMode) => void;
-    onSetStartNode: (n: Node | null) => void;
-    onSetEndNode: (n: Node | null) => void;
-    onPathFound: (path: PathResponse) => void;
-    onBfsResult: (nodes: Node[]) => void;
-    onClear: () => void;
-}
-
-type Algorithm = 'shortest' | 'bfs' | 'dfs';
 
 export default function ControlPanel({
-    startNode, endNode, selectionMode,
-    onSetSelectionMode, onSetStartNode, onSetEndNode,
-    onPathFound, onBfsResult, onClear
-}: ControlPanelProps) {
-    const [algorithm, setAlgorithm] = useState<Algorithm>('shortest');
+    startNode,
+    endNode,
+    selectionMode,
+    onSetSelectionMode,
+    onSetStartNode,
+    onSetEndNode,
+    onPathFound,
+    onBfsResult,
+    onClear,
+}) {
+    const [algorithm, setAlgorithm] = useState('shortest');
     const [loading, setLoading] = useState(false);
-    const [status, setStatus] = useState<StatusResponse | null>(null);
-    const [result, setResult] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+    const [status, setStatus] = useState(null);
+    const [result, setResult] = useState(null);
     const [fromInput, setFromInput] = useState('');
     const [toInput, setToInput] = useState('');
-    const [inputMode, setInputMode] = useState<'click' | 'type'>('click');
+    const [inputMode, setInputMode] = useState('click');
 
     const refreshStatus = useCallback(() => {
-        graphService.getStatus().then(setStatus).catch(() => { });
+        graphService.getStatus().then(setStatus).catch(() => {});
     }, []);
 
     useEffect(() => {
         refreshStatus();
-        const t = setInterval(refreshStatus, 5000);
-        return () => clearInterval(t);
+        const intervalId = setInterval(refreshStatus, 5000);
+        return () => clearInterval(intervalId);
     }, [refreshStatus]);
 
-    // Sync typed inputs with selected nodes
     useEffect(() => {
         if (startNode) setFromInput(startNode.id);
     }, [startNode]);
+
     useEffect(() => {
         if (endNode) setToInput(endNode.id);
     }, [endNode]);
@@ -53,54 +43,78 @@ export default function ControlPanel({
         const toId = inputMode === 'type' ? toInput.trim() : endNode?.id;
 
         if (algorithm === 'bfs') {
-            if (!fromId) { setResult({ type: 'error', message: 'Select or enter a Start node.' }); return; }
-            setLoading(true); setResult(null);
+            if (!fromId) {
+                setResult({ type: 'error', message: 'Select or enter a Start node.' });
+                return;
+            }
+
+            setLoading(true);
+            setResult(null);
             try {
                 const nodes = await graphService.bfs1(fromId);
                 onBfsResult(nodes);
                 setResult({ type: 'success', message: `BFS found ${nodes.length} neighbor(s).` });
-            } catch (e: any) {
+            } catch (e) {
                 setResult({ type: 'error', message: e.response?.data?.message || e.message });
-            } finally { setLoading(false); }
+            } finally {
+                setLoading(false);
+            }
             return;
         }
 
-        if (!fromId || !toId) { setResult({ type: 'error', message: 'Select or enter both Start and End nodes.' }); return; }
+        if (!fromId || !toId) {
+            setResult({ type: 'error', message: 'Select or enter both Start and End nodes.' });
+            return;
+        }
 
-        setLoading(true); setResult(null);
+        setLoading(true);
+        setResult(null);
         try {
             if (algorithm === 'shortest') {
                 const path = await graphService.shortestPath(fromId, toId);
                 onPathFound(path);
                 const km = (path.totalDistance / 1000).toFixed(2);
-                setResult({ type: 'success', message: `Route found! ${km} km · ${path.path.length} nodes` });
+                setResult({ type: 'success', message: `Route found! ${km} km - ${path.path.length} nodes` });
             } else {
                 const reachable = await graphService.dfs(fromId, toId);
-                setResult({ type: reachable ? 'success' : 'info', message: reachable ? '✓ Path exists (DFS confirmed)' : '✗ No path found between these nodes' });
+                setResult({
+                    type: reachable ? 'success' : 'info',
+                    message: reachable ? 'Path exists (DFS confirmed)' : 'No path found between these nodes',
+                });
             }
-        } catch (e: any) {
+        } catch (e) {
             setResult({ type: 'error', message: e.response?.data?.message || e.message });
-        } finally { setLoading(false); }
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleLoadFile = async () => {
-        setLoading(true); setResult(null);
+        setLoading(true);
+        setResult(null);
         try {
-            const r = await graphService.loadFile();
-            setResult({ type: 'success', message: `Loaded ${r.nodeCount.toLocaleString()} nodes from file.` });
+            const response = await graphService.loadFile();
+            setResult({ type: 'success', message: `Loaded ${response.nodeCount.toLocaleString()} nodes from file.` });
             refreshStatus();
-        } catch (e: any) { setResult({ type: 'error', message: e.response?.data?.message || e.message }); }
-        finally { setLoading(false); }
+        } catch (e) {
+            setResult({ type: 'error', message: e.response?.data?.message || e.message });
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleLoadDb = async () => {
-        setLoading(true); setResult(null);
+        setLoading(true);
+        setResult(null);
         try {
-            const r = await graphService.loadDb();
-            setResult({ type: 'success', message: `Loaded ${r.nodeCount.toLocaleString()} nodes from DB.` });
+            const response = await graphService.loadDb();
+            setResult({ type: 'success', message: `Loaded ${response.nodeCount.toLocaleString()} nodes from DB.` });
             refreshStatus();
-        } catch (e: any) { setResult({ type: 'error', message: e.response?.data?.message || e.message }); }
-        finally { setLoading(false); }
+        } catch (e) {
+            setResult({ type: 'error', message: e.response?.data?.message || e.message });
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleClear = () => {
@@ -110,16 +124,17 @@ export default function ControlPanel({
         setToInput('');
     };
 
-    const isRunDisabled = loading || (algorithm !== 'bfs' && !((inputMode === 'click' ? startNode?.id : fromInput) && (inputMode === 'click' ? endNode?.id : toInput)));
+    const isRunDisabled =
+        loading ||
+        (algorithm !== 'bfs' &&
+            !((inputMode === 'click' ? startNode?.id : fromInput) && (inputMode === 'click' ? endNode?.id : toInput)));
 
     return (
         <div className="animate-slide-in" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-
-            {/* Header Card */}
             <div className="glass" style={{ borderRadius: '16px', padding: '16px 20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div>
-                        <h1 style={{ fontSize: '18px', fontWeight: 700, background: 'linear-gradient(135deg, #818cf8, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                        <h1 style={{ fontSize: '18px', fontWeight: 700, background: 'linear-gradient(135deg, #0ea5e9, #0284c7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                             OSM Graph
                         </h1>
                         <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Graph Traversal Explorer</p>
@@ -136,7 +151,6 @@ export default function ControlPanel({
                 </div>
             </div>
 
-            {/* Data Management */}
             <div className="glass" style={{ borderRadius: '16px', padding: '16px' }}>
                 <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>Data Source</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -151,14 +165,13 @@ export default function ControlPanel({
                 </div>
             </div>
 
-            {/* Node Selection */}
             <div className="glass" style={{ borderRadius: '16px', padding: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
                     <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Route</p>
-                    <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: '6px', padding: '2px' }}>
-                        {(['click', 'type'] as const).map(m => (
-                            <button key={m} onClick={() => setInputMode(m)} style={{ padding: '4px 10px', borderRadius: '4px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 500, background: inputMode === m ? 'var(--accent)' : 'transparent', color: inputMode === m ? 'white' : 'var(--text-muted)', transition: 'all 0.2s' }}>
-                                {m === 'click' ? '🖱 Click' : '⌨ Type'}
+                    <div style={{ display: 'flex', background: 'rgba(255,255,255,0.62)', borderRadius: '6px', padding: '2px', border: '1px solid var(--border)' }}>
+                        {['click', 'type'].map(mode => (
+                            <button key={mode} onClick={() => setInputMode(mode)} style={{ padding: '4px 10px', borderRadius: '4px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 500, background: inputMode === mode ? 'var(--accent)' : 'transparent', color: inputMode === mode ? 'white' : 'var(--text-muted)', transition: 'all 0.2s' }}>
+                                {mode === 'click' ? 'Click' : 'Type'}
                             </button>
                         ))}
                     </div>
@@ -166,13 +179,12 @@ export default function ControlPanel({
 
                 {inputMode === 'click' ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {/* Start node selector */}
                         <button
                             onClick={() => onSetSelectionMode(selectionMode === 'start' ? null : 'start')}
                             style={{
                                 display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
                                 borderRadius: '10px', border: `1.5px solid ${selectionMode === 'start' ? 'var(--node-start)' : startNode ? 'rgba(16,185,129,0.3)' : 'var(--border)'}`,
-                                background: selectionMode === 'start' ? 'rgba(16,185,129,0.1)' : startNode ? 'rgba(16,185,129,0.05)' : 'rgba(0,0,0,0.2)',
+                                background: selectionMode === 'start' ? 'rgba(16,185,129,0.12)' : startNode ? 'rgba(16,185,129,0.06)' : 'rgba(255,255,255,0.62)',
                                 cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left', width: '100%',
                                 boxShadow: selectionMode === 'start' ? '0 0 12px rgba(16,185,129,0.2)' : 'none'
                             }}
@@ -183,21 +195,20 @@ export default function ControlPanel({
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '1px' }}>Start Node</div>
                                 <div style={{ fontSize: '12px', color: startNode ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: startNode ? 500 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {startNode ? startNode.id : selectionMode === 'start' ? '📍 Click on map...' : 'Click to select'}
+                                    {startNode ? startNode.id : selectionMode === 'start' ? 'Click on map...' : 'Click to select'}
                                 </div>
                             </div>
                             {startNode && (
-                                <button onClick={e => { e.stopPropagation(); onSetStartNode(null); setFromInput(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px', fontSize: '14px' }}>✕</button>
+                                <button onClick={e => { e.stopPropagation(); onSetStartNode(null); setFromInput(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px', fontSize: '14px' }}>X</button>
                             )}
                         </button>
 
-                        {/* End node selector */}
                         <button
                             onClick={() => onSetSelectionMode(selectionMode === 'end' ? null : 'end')}
                             style={{
                                 display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
                                 borderRadius: '10px', border: `1.5px solid ${selectionMode === 'end' ? 'var(--node-end)' : endNode ? 'rgba(239,68,68,0.3)' : 'var(--border)'}`,
-                                background: selectionMode === 'end' ? 'rgba(239,68,68,0.1)' : endNode ? 'rgba(239,68,68,0.05)' : 'rgba(0,0,0,0.2)',
+                                background: selectionMode === 'end' ? 'rgba(239,68,68,0.12)' : endNode ? 'rgba(239,68,68,0.06)' : 'rgba(255,255,255,0.62)',
                                 cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left', width: '100%',
                                 boxShadow: selectionMode === 'end' ? '0 0 12px rgba(239,68,68,0.2)' : 'none'
                             }}
@@ -208,11 +219,11 @@ export default function ControlPanel({
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '1px' }}>End Node</div>
                                 <div style={{ fontSize: '12px', color: endNode ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: endNode ? 500 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {endNode ? endNode.id : selectionMode === 'end' ? '📍 Click on map...' : 'Click to select'}
+                                    {endNode ? endNode.id : selectionMode === 'end' ? 'Click on map...' : 'Click to select'}
                                 </div>
                             </div>
                             {endNode && (
-                                <button onClick={e => { e.stopPropagation(); onSetEndNode(null); setToInput(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px', fontSize: '14px' }}>✕</button>
+                                <button onClick={e => { e.stopPropagation(); onSetEndNode(null); setToInput(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px', fontSize: '14px' }}>X</button>
                             )}
                         </button>
                     </div>
@@ -224,27 +235,25 @@ export default function ControlPanel({
                 )}
             </div>
 
-            {/* Algorithm Selection */}
             <div className="glass" style={{ borderRadius: '16px', padding: '16px' }}>
                 <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>Algorithm</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '12px' }}>
-                    {([
-                        { id: 'shortest', label: 'Shortest', icon: '🗺' },
-                        { id: 'bfs', label: 'BFS', icon: '🔵' },
-                        { id: 'dfs', label: 'DFS', icon: '🔴' },
-                    ] as const).map(alg => (
+                    {[
+                        { id: 'shortest', label: 'Shortest' },
+                        { id: 'bfs', label: 'BFS' },
+                        { id: 'dfs', label: 'DFS' },
+                    ].map(alg => (
                         <button
                             key={alg.id}
                             onClick={() => setAlgorithm(alg.id)}
                             style={{
                                 padding: '8px 6px', borderRadius: '8px', border: `1.5px solid ${algorithm === alg.id ? 'var(--border-active)' : 'var(--border)'}`,
-                                background: algorithm === alg.id ? 'var(--accent-glow)' : 'rgba(0,0,0,0.2)',
+                                background: algorithm === alg.id ? 'var(--accent-glow)' : 'rgba(255,255,255,0.62)',
                                 cursor: 'pointer', transition: 'all 0.2s', fontSize: '11px', fontWeight: 600,
                                 color: algorithm === alg.id ? 'var(--accent-hover)' : 'var(--text-secondary)',
                                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px'
                             }}
                         >
-                            <span style={{ fontSize: '16px' }}>{alg.icon}</span>
                             {alg.label}
                         </button>
                     ))}
@@ -270,7 +279,6 @@ export default function ControlPanel({
                 </button>
             </div>
 
-            {/* Result */}
             {result && (
                 <div className="animate-fade-in glass" style={{
                     borderRadius: '12px', padding: '12px 14px',
@@ -283,7 +291,6 @@ export default function ControlPanel({
                 </div>
             )}
 
-            {/* Clear button */}
             {(startNode || endNode) && (
                 <button className="btn btn-ghost animate-fade-in" onClick={handleClear} style={{ width: '100%', fontSize: '12px', color: 'var(--text-muted)' }}>
                     Clear Route

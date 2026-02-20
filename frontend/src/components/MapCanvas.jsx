@@ -1,21 +1,18 @@
-import { useEffect, useRef } from 'react';
+﻿import { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import type { Node, PathResponse } from '../services/api';
 import GraphOverlay from './GraphOverlay';
 
-// OSM data bounds: lat [12.86440, 12.88858], lon [74.82913, 74.87247] → Mangalore, India
-const DEFAULT_CENTER: [number, number] = [12.8765, 74.8508]; // fallback center
+// OSM data bounds: lat [12.86440, 12.88858], lon [74.82913, 74.87247] -> Mangalore, India
+const DEFAULT_CENTER = [12.8765, 74.8508]; // fallback center
 const DEFAULT_ZOOM = 12; // fallback zoom
 const iconUrl = new URL('leaflet/dist/images/marker-icon.png', import.meta.url).href;
 const iconRetinaUrl = new URL('leaflet/dist/images/marker-icon-2x.png', import.meta.url).href;
 const shadowUrl = new URL('leaflet/dist/images/marker-shadow.png', import.meta.url).href;
 L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
 
-
-// Custom SVG marker factory
-function createSvgIcon(color: string, label: string, size = 36) {
+function createSvgIcon(color, label, size = 36) {
     const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size + 8}" viewBox="0 0 ${size} ${size + 8}">
       <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
@@ -26,6 +23,7 @@ function createSvgIcon(color: string, label: string, size = 36) {
       <text x="${size / 2}" y="${size / 2 + 5}" text-anchor="middle" font-family="Inter,sans-serif" font-size="13" font-weight="700" fill="white">${label}</text>
       <line x1="${size / 2}" y1="${size - 2}" x2="${size / 2}" y2="${size + 6}" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
     </svg>`;
+
     return L.divIcon({
         html: svg,
         className: '',
@@ -37,24 +35,9 @@ function createSvgIcon(color: string, label: string, size = 36) {
 
 const startIcon = createSvgIcon('#10b981', 'A');
 const endIcon = createSvgIcon('#ef4444', 'B');
-const waypointIcon = createSvgIcon('#6366f1', '·', 20);
+const waypointIcon = createSvgIcon('#0ea5e9', '.', 20);
 
-
-export type SelectionMode = 'start' | 'end' | null;
-
-interface MapCanvasProps {
-    path: PathResponse | null;
-    startNode: Node | null;
-    endNode: Node | null;
-    bfsNodes: Node[];
-    selectionMode: SelectionMode;
-    onNodeSelect: (node: Node) => void;
-    graphBounds: [[number, number], [number, number]] | null;
-    showGraph: boolean;
-}
-
-// Fits map to graph bounds when they become available
-function InitialBoundsFitter({ bounds }: { bounds: [[number, number], [number, number]] | null }) {
+function InitialBoundsFitter({ bounds }) {
     const map = useMap();
     const zoomedRef = useRef(false);
 
@@ -68,33 +51,37 @@ function InitialBoundsFitter({ bounds }: { bounds: [[number, number], [number, n
     return null;
 }
 
-// Inner component that handles map events and rendering
 function MapController({
-    path, startNode, endNode, bfsNodes, selectionMode, onNodeSelect, graphBounds
-}: MapCanvasProps) {
+    path,
+    startNode,
+    endNode,
+    bfsNodes,
+    selectionMode,
+    onNodeSelect,
+    graphBounds,
+}) {
     const map = useMap();
-    const layerGroupRef = useRef<L.LayerGroup>(L.layerGroup());
-    const pathLayerRef = useRef<L.LayerGroup>(L.layerGroup());
-    const animFrameRef = useRef<number | null>(null);
+    const layerGroupRef = useRef(L.layerGroup());
+    const pathLayerRef = useRef(L.layerGroup());
+    const animFrameRef = useRef(null);
 
-    // Add layer groups to map once
     useEffect(() => {
         layerGroupRef.current.addTo(map);
         pathLayerRef.current.addTo(map);
+
         return () => {
             layerGroupRef.current.remove();
             pathLayerRef.current.remove();
         };
     }, [map]);
 
-    // Handle map click for node selection
     useMapEvents({
         click(e) {
             if (!selectionMode) return;
-            // Create a synthetic node from click position, trimmed to 4 decimal places
+
             const lat = parseFloat(e.latlng.lat.toFixed(4));
             const lon = parseFloat(e.latlng.lng.toFixed(4));
-            const syntheticNode: Node = {
+            const syntheticNode = {
                 id: `${lat},${lon}`,
                 lat,
                 lon,
@@ -107,75 +94,84 @@ function MapController({
             } else {
                 map.getContainer().style.cursor = '';
             }
-        }
+        },
     });
 
-    // Render markers and path
     useEffect(() => {
         layerGroupRef.current.clearLayers();
         pathLayerRef.current.clearLayers();
         if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
 
-        // Start marker
         if (startNode) {
-            const m = L.marker([startNode.lat, startNode.lon], { icon: startIcon, zIndexOffset: 1000 });
-            m.bindPopup(`<div style="font-family:Inter,sans-serif;font-size:13px"><b style="color:#10b981">Start Node</b><br><span style="color:#94a3b8">ID: ${startNode.id}</span>${startNode.name ? `<br><span style="color:#94a3b8">${startNode.name}</span>` : ''}</div>`);
-            layerGroupRef.current.addLayer(m);
+            const marker = L.marker([startNode.lat, startNode.lon], { icon: startIcon, zIndexOffset: 1000 });
+            marker.bindPopup(`<div style="font-family:Inter,sans-serif;font-size:13px"><b style="color:#10b981">Start Node</b><br><span style="color:#64748b">ID: ${startNode.id}</span>${startNode.name ? `<br><span style="color:#64748b">${startNode.name}</span>` : ''}</div>`);
+            layerGroupRef.current.addLayer(marker);
         }
 
-        // End marker
         if (endNode) {
-            const m = L.marker([endNode.lat, endNode.lon], { icon: endIcon, zIndexOffset: 999 });
-            m.bindPopup(`<div style="font-family:Inter,sans-serif;font-size:13px"><b style="color:#ef4444">End Node</b><br><span style="color:#94a3b8">ID: ${endNode.id}</span>${endNode.name ? `<br><span style="color:#94a3b8">${endNode.name}</span>` : ''}</div>`);
-            layerGroupRef.current.addLayer(m);
+            const marker = L.marker([endNode.lat, endNode.lon], { icon: endIcon, zIndexOffset: 999 });
+            marker.bindPopup(`<div style="font-family:Inter,sans-serif;font-size:13px"><b style="color:#ef4444">End Node</b><br><span style="color:#64748b">ID: ${endNode.id}</span>${endNode.name ? `<br><span style="color:#64748b">${endNode.name}</span>` : ''}</div>`);
+            layerGroupRef.current.addLayer(marker);
         }
 
-        // BFS neighbor markers
         bfsNodes.forEach(node => {
-            const m = L.circleMarker([node.lat, node.lon], {
-                radius: 6, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.8, weight: 2
+            const marker = L.circleMarker([node.lat, node.lon], {
+                radius: 6,
+                color: '#f59e0b',
+                fillColor: '#f59e0b',
+                fillOpacity: 0.8,
+                weight: 2,
             });
-            m.bindPopup(`<div style="font-family:Inter,sans-serif;font-size:12px"><b style="color:#f59e0b">Neighbor</b><br><span style="color:#94a3b8">ID: ${node.id}</span></div>`);
-            layerGroupRef.current.addLayer(m);
+            marker.bindPopup(`<div style="font-family:Inter,sans-serif;font-size:12px"><b style="color:#f59e0b">Neighbor</b><br><span style="color:#64748b">ID: ${node.id}</span></div>`);
+            layerGroupRef.current.addLayer(marker);
         });
 
-        // Animated path drawing
         if (path && path.path.length > 1) {
-            const coords: [number, number][] = path.path.map(n => [n.lat, n.lon]);
+            const coords = path.path.map(node => [node.lat, node.lon]);
 
-            // Draw background path (faint)
             L.polyline(coords, {
-                color: '#6366f1', weight: 6, opacity: 0.15, lineCap: 'round', lineJoin: 'round'
+                color: '#38bdf8',
+                weight: 6,
+                opacity: 0.15,
+                lineCap: 'round',
+                lineJoin: 'round',
             }).addTo(pathLayerRef.current);
 
-            // Animated foreground path - draw segment by segment
             let i = 1;
             const drawNext = () => {
                 if (i >= coords.length) {
-                    // Add waypoint markers for intermediate nodes
                     path.path.slice(1, -1).forEach((node, idx) => {
-                        if (idx % 3 === 0) { // Only every 3rd to avoid clutter
+                        if (idx % 3 === 0) {
                             L.marker([node.lat, node.lon], { icon: waypointIcon, zIndexOffset: 100 })
                                 .addTo(pathLayerRef.current);
                         }
                     });
                     return;
                 }
+
                 L.polyline([coords[i - 1], coords[i]], {
-                    color: '#818cf8', weight: 5, opacity: 0.9, lineCap: 'round', lineJoin: 'round'
+                    color: '#0284c7',
+                    weight: 5,
+                    opacity: 0.9,
+                    lineCap: 'round',
+                    lineJoin: 'round',
                 }).addTo(pathLayerRef.current);
-                i++;
+
+                i += 1;
                 animFrameRef.current = requestAnimationFrame(drawNext);
             };
-            // Small delay before starting animation
-            setTimeout(() => { animFrameRef.current = requestAnimationFrame(drawNext); }, 100);
 
-            // Fly to path bounds
+            setTimeout(() => {
+                animFrameRef.current = requestAnimationFrame(drawNext);
+            }, 100);
+
             const bounds = L.latLngBounds(coords);
             map.flyToBounds(bounds, { padding: [60, 60], duration: 1.2, easeLinearity: 0.25 });
         } else if (startNode && endNode) {
-            // Fit to show both markers
-            const bounds = L.latLngBounds([[startNode.lat, startNode.lon], [endNode.lat, endNode.lon]]);
+            const bounds = L.latLngBounds([
+                [startNode.lat, startNode.lon],
+                [endNode.lat, endNode.lon],
+            ]);
             map.flyToBounds(bounds, { padding: [80, 80], duration: 0.8 });
         } else if (startNode) {
             map.flyTo([startNode.lat, startNode.lon], 15, { duration: 0.8 });
@@ -191,7 +187,7 @@ function MapController({
     return null;
 }
 
-export default function MapCanvas(props: MapCanvasProps) {
+export default function MapCanvas(props) {
     return (
         <MapContainer
             center={DEFAULT_CENTER}
@@ -202,7 +198,7 @@ export default function MapCanvas(props: MapCanvasProps) {
         >
             <TileLayer
                 attribution='&copy; <a href="https://carto.com">CARTO</a>'
-                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
                 maxZoom={19}
             />
             <InitialBoundsFitter bounds={props.graphBounds} />
