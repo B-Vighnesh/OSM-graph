@@ -9,7 +9,12 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 
 @Service
@@ -265,6 +270,7 @@ public class GraphService {
         }
         return false;
     }
+
     private Node findNode(String input) {
 
         // 1️⃣ Try direct ID match first
@@ -294,6 +300,7 @@ public class GraphService {
             return null;
         }
     }
+
     private Node findByLatLon(double lat, double lon) {
 
         double epsilon = 0.0001; // ~11 meters
@@ -316,7 +323,6 @@ public class GraphService {
 
         return closest;
     }
-
 
     public PathResponse shortestPath(String fromId, String toId) {
         Node start=findNode(fromId);
@@ -425,5 +431,56 @@ public class GraphService {
         }
 
         return new GraphData(nodes, edges);
+    }
+
+    public void handleUpload(MultipartFile file) throws Exception {
+
+        // 1️⃣ Check: file exists
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("File is empty");
+        }
+
+        // 2️⃣ Check: file name & extension
+        String filename = file.getOriginalFilename();
+
+        if (filename == null || !filename.toLowerCase().endsWith(".osm")) {
+            throw new IllegalArgumentException("Only .osm files are allowed");
+        }
+
+        // 3️⃣ Check: file size (max 50 MB)
+        if (file.getSize() > 50 * 1024 * 1024) {
+            throw new IllegalArgumentException("File too large (max 50MB)");
+        }
+
+        // 4️⃣ Create upload directory if not exists
+        Path uploadDir = Paths.get("uploads");
+        Files.createDirectories(uploadDir);
+
+        String fixedName = "map.osm";
+
+        Path filePath = uploadDir.resolve(fixedName);
+
+        Files.copy(
+                file.getInputStream(),
+                filePath,
+                StandardCopyOption.REPLACE_EXISTING
+        );
+
+        // 6️⃣ Clear old graph data
+        graph.clear();
+        nodeIndex.clear();
+
+        // 7️⃣ Parse uploaded OSM file
+        Map<Node, List<Edge>> parsed = parser.parse(filePath.toString());
+
+        graph.putAll(parsed);
+
+        // 8️⃣ Rebuild node index
+        for (Node n : graph.keySet()) {
+            nodeIndex.put(n.id, n);
+        }
+
+        // ❌ NO persistToDB()
+        //persistToDB();
     }
 }

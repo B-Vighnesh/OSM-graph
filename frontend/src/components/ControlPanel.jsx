@@ -12,6 +12,7 @@ export default function ControlPanel({
     onPathFound,
     onBfsResult,
     onClear,
+    onGraphDataChanged,
 }) {
     const [algorithm, setAlgorithm] = useState('shortest');
     const [loading, setLoading] = useState(false);
@@ -109,6 +110,7 @@ export default function ControlPanel({
             const response = await graphService.loadFile();
             setResult({ type: 'success', message: `Loaded ${response.nodeCount.toLocaleString()} nodes from file.` });
             refreshStatus();
+            onGraphDataChanged?.();
         } catch (e) {
             setResult({ type: 'error', message: e.response?.data?.message || e.message });
         } finally {
@@ -123,6 +125,7 @@ export default function ControlPanel({
             const response = await graphService.loadDb();
             setResult({ type: 'success', message: `Loaded ${response.nodeCount.toLocaleString()} nodes from DB.` });
             refreshStatus();
+            onGraphDataChanged?.();
         } catch (e) {
             setResult({ type: 'error', message: e.response?.data?.message || e.message });
         } finally {
@@ -156,6 +159,7 @@ export default function ControlPanel({
                 message: response?.message || `Uploaded ${selectedFile.name}${countText}.`,
             });
             refreshStatus();
+            onGraphDataChanged?.();
         } catch (e) {
             setResult({ type: 'error', message: e.response?.data?.message || e.message });
         } finally {

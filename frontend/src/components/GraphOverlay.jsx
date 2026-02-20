@@ -1,12 +1,11 @@
-﻿import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { graphService } from '../services/api';
 
-export default function GraphOverlay({ visible }) {
+export default function GraphOverlay({ visible, refreshKey }) {
     const map = useMap();
     const layerRef = useRef(L.layerGroup());
-    const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {
         layerRef.current.addTo(map);
@@ -18,11 +17,8 @@ export default function GraphOverlay({ visible }) {
     useEffect(() => {
         if (!visible) {
             layerRef.current.clearLayers();
-            setLoaded(false);
             return;
         }
-
-        if (loaded) return;
 
         graphService.getGraphData().then(data => {
             layerRef.current.clearLayers();
@@ -51,12 +47,10 @@ export default function GraphOverlay({ visible }) {
                 );
                 circle.addTo(layerRef.current);
             });
-
-            setLoaded(true);
         }).catch(err => {
             console.error('Failed to load graph data:', err);
         });
-    }, [visible, loaded]);
+    }, [visible, refreshKey]);
 
     return null;
 }

@@ -3,7 +3,9 @@ package com.example.osmgraph.controller;
 
 import com.example.osmgraph.model.Node;
 import com.example.osmgraph.service.GraphService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -89,6 +91,15 @@ public class GraphController {
             return org.springframework.http.ResponseEntity.ok(path);
         } catch (IllegalArgumentException e) {
             return org.springframework.http.ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+    @PostMapping("/upload-file")
+    public ResponseEntity<?> upload(@RequestParam("file") MultipartFile file) {
+        try {
+            service.handleUpload(file);
+            return ResponseEntity.ok(Map.of("message", "File uploaded successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 }

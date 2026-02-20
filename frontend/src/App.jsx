@@ -12,6 +12,7 @@ export default function App() {
     const [bfsNodes, setBfsNodes] = useState([]);
     const [graphBounds, setGraphBounds] = useState(null);
     const [showGraph, setShowGraph] = useState(false);
+    const [graphRefreshKey, setGraphRefreshKey] = useState(0);
     const [currentLocation, setCurrentLocation] = useState(null);
     const [isLocating, setIsLocating] = useState(false);
     const [locationRequestId, setLocationRequestId] = useState(0);
@@ -78,6 +79,10 @@ export default function App() {
         setPath(null);
     }, []);
 
+    const handleGraphDataChanged = useCallback(() => {
+        setGraphRefreshKey(key => key + 1);
+    }, []);
+
     return (
         <div className="app-shell">
             <div className="app-map-layer">
@@ -90,6 +95,7 @@ export default function App() {
                     onNodeSelect={handleNodeSelect}
                     graphBounds={graphBounds}
                     showGraph={showGraph}
+                    graphRefreshKey={graphRefreshKey}
                     currentLocation={currentLocation}
                     locationRequestId={locationRequestId}
                 />
@@ -121,6 +127,7 @@ export default function App() {
                     onPathFound={handlePathFound}
                     onBfsResult={handleBfsResult}
                     onClear={handleClear}
+                    onGraphDataChanged={handleGraphDataChanged}
                 />
             </div>
 

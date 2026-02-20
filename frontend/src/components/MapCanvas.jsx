@@ -246,7 +246,7 @@ export default function MapCanvas(props) {
                 maxZoom={19}
             />
             <InitialBoundsFitter bounds={props.graphBounds} />
-            <GraphOverlay visible={props.showGraph} />
+            <GraphOverlay visible={props.showGraph} refreshKey={props.graphRefreshKey} />
             <ZoomControl position="topright" />
             <MapController {...props} />
         </MapContainer>
