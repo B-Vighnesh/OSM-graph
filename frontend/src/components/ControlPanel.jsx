@@ -38,6 +38,16 @@ export default function ControlPanel({
         if (endNode) setToInput(endNode.id);
     }, [endNode]);
 
+    useEffect(() => {
+        if (algorithm === 'bfs') {
+            onSetEndNode(null);
+            setToInput('');
+            if (selectionMode === 'end') {
+                onSetSelectionMode(null);
+            }
+        }
+    }, [algorithm, selectionMode, onSetEndNode, onSetSelectionMode]);
+
     const handleRun = async () => {
         const fromId = inputMode === 'type' ? fromInput.trim() : startNode?.id;
         const toId = inputMode === 'type' ? toInput.trim() : endNode?.id;
@@ -126,8 +136,9 @@ export default function ControlPanel({
 
     const isRunDisabled =
         loading ||
-        (algorithm !== 'bfs' &&
-            !((inputMode === 'click' ? startNode?.id : fromInput) && (inputMode === 'click' ? endNode?.id : toInput)));
+        (algorithm === 'bfs'
+            ? !(inputMode === 'click' ? startNode?.id : fromInput.trim())
+            : !((inputMode === 'click' ? startNode?.id : fromInput) && (inputMode === 'click' ? endNode?.id : toInput)));
 
     return (
         <div className="animate-slide-in" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -203,34 +214,38 @@ export default function ControlPanel({
                             )}
                         </button>
 
-                        <button
-                            onClick={() => onSetSelectionMode(selectionMode === 'end' ? null : 'end')}
-                            style={{
-                                display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
-                                borderRadius: '10px', border: `1.5px solid ${selectionMode === 'end' ? 'var(--node-end)' : endNode ? 'rgba(239,68,68,0.3)' : 'var(--border)'}`,
-                                background: selectionMode === 'end' ? 'rgba(239,68,68,0.12)' : endNode ? 'rgba(239,68,68,0.06)' : 'rgba(255,255,255,0.62)',
-                                cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left', width: '100%',
-                                boxShadow: selectionMode === 'end' ? '0 0 12px rgba(239,68,68,0.2)' : 'none'
-                            }}
-                        >
-                            <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: endNode ? 'var(--node-end)' : 'rgba(239,68,68,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `2px solid ${endNode ? 'var(--node-end)' : 'rgba(239,68,68,0.3)'}` }}>
-                                <span style={{ fontSize: '12px', fontWeight: 700, color: endNode ? 'white' : 'var(--node-end)' }}>B</span>
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '1px' }}>End Node</div>
-                                <div style={{ fontSize: '12px', color: endNode ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: endNode ? 500 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {endNode ? endNode.id : selectionMode === 'end' ? 'Click on map...' : 'Click to select'}
+                        {algorithm !== 'bfs' && (
+                            <button
+                                onClick={() => onSetSelectionMode(selectionMode === 'end' ? null : 'end')}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
+                                    borderRadius: '10px', border: `1.5px solid ${selectionMode === 'end' ? 'var(--node-end)' : endNode ? 'rgba(239,68,68,0.3)' : 'var(--border)'}`,
+                                    background: selectionMode === 'end' ? 'rgba(239,68,68,0.12)' : endNode ? 'rgba(239,68,68,0.06)' : 'rgba(255,255,255,0.62)',
+                                    cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left', width: '100%',
+                                    boxShadow: selectionMode === 'end' ? '0 0 12px rgba(239,68,68,0.2)' : 'none'
+                                }}
+                            >
+                                <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: endNode ? 'var(--node-end)' : 'rgba(239,68,68,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: `2px solid ${endNode ? 'var(--node-end)' : 'rgba(239,68,68,0.3)'}` }}>
+                                    <span style={{ fontSize: '12px', fontWeight: 700, color: endNode ? 'white' : 'var(--node-end)' }}>B</span>
                                 </div>
-                            </div>
-                            {endNode && (
-                                <button onClick={e => { e.stopPropagation(); onSetEndNode(null); setToInput(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px', fontSize: '14px' }}>X</button>
-                            )}
-                        </button>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '1px' }}>End Node</div>
+                                    <div style={{ fontSize: '12px', color: endNode ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: endNode ? 500 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {endNode ? endNode.id : selectionMode === 'end' ? 'Click on map...' : 'Click to select'}
+                                    </div>
+                                </div>
+                                {endNode && (
+                                    <button onClick={e => { e.stopPropagation(); onSetEndNode(null); setToInput(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px', fontSize: '14px' }}>X</button>
+                                )}
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <input className="input" placeholder="Start Node ID" value={fromInput} onChange={e => setFromInput(e.target.value)} style={{ fontSize: '12px' }} />
-                        <input className="input" placeholder="End Node ID (not needed for BFS)" value={toInput} onChange={e => setToInput(e.target.value)} style={{ fontSize: '12px' }} />
+                        {algorithm !== 'bfs' && (
+                            <input className="input" placeholder="End Node ID" value={toInput} onChange={e => setToInput(e.target.value)} style={{ fontSize: '12px' }} />
+                        )}
                     </div>
                 )}
             </div>

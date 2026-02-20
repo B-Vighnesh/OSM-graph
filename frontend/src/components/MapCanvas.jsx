@@ -1,5 +1,5 @@
 ﻿import { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, ZoomControl, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import GraphOverlay from './GraphOverlay';
@@ -193,7 +193,7 @@ export default function MapCanvas(props) {
             center={DEFAULT_CENTER}
             zoom={DEFAULT_ZOOM}
             scrollWheelZoom
-            zoomControl
+            zoomControl={false}
             style={{ width: '100%', height: '100%' }}
         >
             <TileLayer
@@ -203,6 +203,7 @@ export default function MapCanvas(props) {
             />
             <InitialBoundsFitter bounds={props.graphBounds} />
             <GraphOverlay visible={props.showGraph} />
+            <ZoomControl position="topright" />
             <MapController {...props} />
         </MapContainer>
     );
