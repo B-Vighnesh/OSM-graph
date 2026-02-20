@@ -12,6 +12,9 @@ export default function App() {
     const [bfsNodes, setBfsNodes] = useState([]);
     const [graphBounds, setGraphBounds] = useState(null);
     const [showGraph, setShowGraph] = useState(false);
+    const [currentLocation, setCurrentLocation] = useState(null);
+    const [isLocating, setIsLocating] = useState(false);
+    const [locationRequestId, setLocationRequestId] = useState(0);
 
     useEffect(() => {
         graphService.getBounds().then(bounds => {
@@ -20,6 +23,32 @@ export default function App() {
             }
         }).catch(() => {});
     }, []);
+
+    const requestCurrentLocation = useCallback((recenter = false) => {
+        if (!navigator.geolocation) return;
+
+        setIsLocating(true);
+        navigator.geolocation.getCurrentPosition(
+            position => {
+                setCurrentLocation({
+                    lat: position.coords.latitude,
+                    lon: position.coords.longitude,
+                    accuracy: position.coords.accuracy,
+                });
+                if (recenter) setLocationRequestId(id => id + 1);
+                setIsLocating(false);
+            },
+            error => {
+                console.warn('Geolocation error:', error.message);
+                setIsLocating(false);
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+        );
+    }, []);
+
+    useEffect(() => {
+        requestCurrentLocation(false);
+    }, [requestCurrentLocation]);
 
     const handleNodeSelect = useCallback((node) => {
         if (selectionMode === 'start') {
@@ -61,6 +90,8 @@ export default function App() {
                     onNodeSelect={handleNodeSelect}
                     graphBounds={graphBounds}
                     showGraph={showGraph}
+                    currentLocation={currentLocation}
+                    locationRequestId={locationRequestId}
                 />
             </div>
 
@@ -103,6 +134,20 @@ export default function App() {
             >
                 <span style={{ fontSize: '15px' }}>#</span>
                 {showGraph ? 'Hide Graph' : 'Show Graph'}
+            </button>
+
+            <button
+                className="app-locate-btn"
+                onClick={() => requestCurrentLocation(true)}
+                disabled={isLocating}
+                style={{
+                    border: '1.5px solid var(--border)',
+                    background: 'rgba(255,255,255,0.9)',
+                    color: 'var(--text-secondary)',
+                }}
+            >
+                <span style={{ fontSize: '14px' }}>◎</span>
+                {isLocating ? 'Locating...' : 'Locate Me'}
             </button>
 
             {path && (

@@ -37,6 +37,14 @@ const startIcon = createSvgIcon('#10b981', 'A');
 const endIcon = createSvgIcon('#ef4444', 'B');
 const waypointBlueIcon = createSvgIcon('#0ea5e9', '.', 20);
 const waypointOrangeIcon = createSvgIcon('#f97316', '.', 20);
+const userLocationIcon = L.divIcon({
+    className: '',
+    html: `
+    <div style="width:18px;height:18px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 0 0 4px rgba(37,99,235,0.2);"></div>
+    `,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+});
 
 function InitialBoundsFitter({ bounds }) {
     const map = useMap();
@@ -61,11 +69,14 @@ function MapController({
     onNodeSelect,
     graphBounds,
     showGraph,
+    currentLocation,
+    locationRequestId,
 }) {
     const map = useMap();
     const layerGroupRef = useRef(L.layerGroup());
     const pathLayerRef = useRef(L.layerGroup());
     const animFrameRef = useRef(null);
+    const lastLocationRequestRef = useRef(0);
 
     useEffect(() => {
         layerGroupRef.current.addTo(map);
@@ -131,6 +142,26 @@ function MapController({
             layerGroupRef.current.addLayer(marker);
         });
 
+        if (currentLocation) {
+            const locationMarker = L.marker([currentLocation.lat, currentLocation.lon], {
+                icon: userLocationIcon,
+                zIndexOffset: 1100,
+            });
+            locationMarker.bindPopup(`<div style="font-family:Inter,sans-serif;font-size:12px"><b style="color:#2563eb">My Location</b><br><span style="color:#64748b">Lat: ${currentLocation.lat.toFixed(6)}<br>Lon: ${currentLocation.lon.toFixed(6)}</span></div>`);
+            layerGroupRef.current.addLayer(locationMarker);
+
+            if (currentLocation.accuracy && Number.isFinite(currentLocation.accuracy)) {
+                const accuracyCircle = L.circle([currentLocation.lat, currentLocation.lon], {
+                    radius: currentLocation.accuracy,
+                    color: '#2563eb',
+                    fillColor: '#60a5fa',
+                    fillOpacity: 0.12,
+                    weight: 1.5,
+                });
+                layerGroupRef.current.addLayer(accuracyCircle);
+            }
+        }
+
         if (path && path.path.length > 1) {
             const coords = path.path.map(node => [node.lat, node.lon]);
 
@@ -187,7 +218,15 @@ function MapController({
         return () => {
             if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
         };
-    }, [path, startNode, endNode, bfsNodes, graphBounds, map, showGraph]);
+    }, [path, startNode, endNode, bfsNodes, graphBounds, map, showGraph, currentLocation]);
+
+    useEffect(() => {
+        if (!currentLocation || !locationRequestId) return;
+        if (lastLocationRequestRef.current === locationRequestId) return;
+
+        lastLocationRequestRef.current = locationRequestId;
+        map.flyTo([currentLocation.lat, currentLocation.lon], Math.max(map.getZoom(), 15), { duration: 0.8 });
+    }, [currentLocation, locationRequestId, map]);
 
     return null;
 }
