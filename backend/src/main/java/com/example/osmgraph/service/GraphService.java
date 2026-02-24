@@ -225,51 +225,84 @@ public class GraphService {
 
         List<Node> result = new ArrayList<>();
 
-        // Lookup with coordinate support
         Node start = findNode(startId);
 
-        if (start == null) {
-            return result; // empty
+        // Proper existence check
+        if (start == null || !graph.containsKey(start)) {
+            return result;
         }
 
-        List<Edge> edges = graph.get(start);
-        if (edges != null) {
-            for (Edge e : edges) {
-                result.add(e.to);
+        // Level-1 = direct neighbors only
+        List<Edge> neighbors = graph.get(start);
+
+        if (neighbors == null) {
+            return result;
+        }
+
+        Set<Node> visited = new HashSet<>();
+
+        for (Edge edge : neighbors) {
+
+            Node neighbor = edge.to;
+
+            // Safety check
+            if (neighbor != null && !visited.contains(neighbor)) {
+
+                visited.add(neighbor);
+                result.add(neighbor);
             }
         }
+
         return result;
     }
 
     public boolean dfsReachability(String fromId, String toId) {
+
         Node start = findNode(fromId);
         Node end = findNode(toId);
 
-        if (start == null || end == null)
+        // Proper existence check
+        if (start == null || end == null) {
             return false;
+        }
+
+        if (!graph.containsKey(start) || !graph.containsKey(end)) {
+            return false;
+        }
 
         Set<Node> visited = new HashSet<>();
-        Stack<Node> stack = new Stack<>();
 
-        stack.push(start);
-        visited.add(start);
+        return dfsHelper(start, end, visited);
+    }
 
-        while (!stack.isEmpty()) {
-            Node current = stack.pop();
+    private boolean dfsHelper(Node current, Node target, Set<Node> visited) {
 
-            if (current.equals(end))
-                return true;
+        // Mark visited
+        visited.add(current);
 
-            List<Edge> neighbors = graph.get(current);
-            if (neighbors != null) {
-                for (Edge edge : neighbors) {
-                    if (!visited.contains(edge.to)) {
-                        visited.add(edge.to);
-                        stack.push(edge.to);
-                    }
+        // Found target
+        if (current.equals(target)) {
+            return true;
+        }
+
+        List<Edge> neighbors = graph.get(current);
+
+        if (neighbors == null) {
+            return false;
+        }
+
+        for (Edge edge : neighbors) {
+
+            Node next = edge.to;
+
+            if (next != null && !visited.contains(next)) {
+
+                if (dfsHelper(next, target, visited)) {
+                    return true;
                 }
             }
         }
+
         return false;
     }
 
@@ -305,8 +338,7 @@ public class GraphService {
 
     private Node findByLatLon(double lat, double lon) {
 
-        double epsilon = 0.0001; // ~11 meters
-
+//        double epsilon = 0.0001; // ~11 meters
         Node closest = null;
         double minDist = Double.MAX_VALUE;
 
