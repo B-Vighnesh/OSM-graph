@@ -47,7 +47,7 @@ public class GraphService {
             nodeIndex.put(n.id, n);
         }
 
-//        persistToDB();
+        persistToDB();
     }
 
     private void connect(Node a, Node b) {
