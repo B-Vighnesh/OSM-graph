@@ -4,7 +4,7 @@ A full-stack web application to visualize, explore, and traverse OpenStreetMap (
 
 ---
 
-## 🚀 Features
+## Features
 
 * Load and parse `.osm` map files
 * Build road network as a graph (nodes + edges)
@@ -19,7 +19,7 @@ A full-stack web application to visualize, explore, and traverse OpenStreetMap (
 
 ---
 
-## 🏗️ Project Architecture
+## Project Architecture
 
 ```
 OSM File
@@ -39,7 +39,7 @@ User Interface
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 OSM-graph-main/
@@ -67,7 +67,7 @@ OSM-graph-main/
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Backend
 
@@ -89,7 +89,7 @@ OSM-graph-main/
 
 ---
 
-## ⚙️ Setup Instructions
+## Setup Instructions
 
 ### Prerequisites
 
@@ -100,7 +100,7 @@ OSM-graph-main/
 
 ---
 
-## 1️⃣ Backend Setup
+## Backend Setup
 
 ### Step 1: Configure Neo4j
 
@@ -129,7 +129,7 @@ http://localhost:8080
 
 ---
 
-## 2️⃣ Frontend Setup
+## Frontend Setup
 
 ### Step 1: Install Dependencies
 
@@ -152,7 +152,7 @@ http://localhost:5173
 
 ---
 
-## 📡 API Endpoints
+## API Endpoints
 
 ### Load OSM File
 
@@ -189,7 +189,7 @@ GET /api/graph
 
 ---
 
-## 🧠 Core Components
+## Core Components
 
 ### OsmFileParser
 
@@ -216,7 +216,7 @@ GET /api/graph
 
 ---
 
-## 📍 Coordinate Snapping
+## Coordinate Snapping
 
 Map clicks return coordinates, but the graph uses OSM node IDs.
 
@@ -233,7 +233,7 @@ Current approach is linear scan (O(n)).
 
 ---
 
-## 🎯 Graph Algorithms
+## Graph Algorithms
 
 ### Dijkstra
 
@@ -252,7 +252,7 @@ Current approach is linear scan (O(n)).
 
 ---
 
-## 🖥️ Frontend Workflow
+## Frontend Workflow
 
 1. User clicks "Select A"
 2. User clicks map
@@ -262,7 +262,7 @@ Current approach is linear scan (O(n)).
 
 ---
 
-## 🕸️ Graph Overlay
+## Graph Overlay
 
 The overlay shows the complete road network.
 
@@ -281,7 +281,7 @@ If nothing appears:
 
 ---
 
-## ⚠️ Common Issues
+## Common Issues
 
 ### CORS Error
 
@@ -311,7 +311,7 @@ Causes:
 
 ---
 
-## 🚧 Future Improvements
+## Future Improvements
 
 * Spatial indexing (KD-Tree / R-Tree)
 * Bounding-box based graph loading
@@ -323,7 +323,7 @@ Causes:
 ---
 
 
-## 🤝 Contribution
+## Contribution
 
 1. Fork the repository
 2. Create feature branch
